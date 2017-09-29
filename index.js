@@ -5,11 +5,11 @@ var express = require('express'),
     mysql = require('mysql');
 
 var connection = mysql.createConnection({
-  host     : "cyrano-all-db.cczcsnrb5aly.us-east-2.rds.amazonaws.com",
-  user     : "cyrano",
-  password : "isstiau2nG",
-  port     : "3306",
-  database : "cyranodb"
+  host     : config.host,
+  user     : config.user,
+  password : config.password,
+  port     : config.port,
+  database : config.database
 });
 
 //===== Express =====//
