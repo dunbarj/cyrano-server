@@ -1,31 +1,23 @@
 {
-  "name": "node-js-getting-started",
-  "version": "0.2.6",
-  "description": "A sample Node.js app using Express 4",
-  "engines": {
-    "node": "6.11.1"
-  },
+  "name": "cyrano",
+  "version": "1.0.0",
+  "description": "Cyrano is an Android application that allows users to get feedback on possible responses to questions about their conversations.",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "test": "node test.js"
-  },
-  "dependencies": {
-    "ejs": "2.5.6",
-    "express": "4.15.2"
-  },
-  "devDependencies": {
-    "request": "^2.81.0",
-    "tape": "^4.7.0"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/heroku/node-js-getting-started"
+    "url": "git+https://github.com/vshurman/cyrano.git"
   },
   "keywords": [
-    "node",
-    "heroku",
-    "express"
+    "cyrano",
+    "conversations"
   ],
-  "license": "MIT"
+  "author": "Cyrano Team",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/vshurman/cyrano/issues"
+  },
+  "homepage": "https://github.com/vshurman/cyrano#readme"
 }

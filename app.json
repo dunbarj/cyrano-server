@@ -1,8 +1,8 @@
 {
-  "name": "Start on Heroku: Node.js",
-  "description": "A barebones Node.js app using Express 4",
-  "repository": "https://github.com/heroku/node-js-getting-started",
-  "logo": "https://cdn.rawgit.com/heroku/node-js-getting-started/master/public/node.svg",
-  "keywords": ["node", "express", "heroku"],
-  "image": "heroku/nodejs"
+  "name": "Cyrano Server",
+  "description": "A Node.js server using Express 4 to handle requests from the Cyrano Android application.",
+  "repository": "https://github.com/dunbarj/cyrano-server",
+  "logo": "",
+  "keywords": ["cyrano", "server", "node", "express", "heroku"],
+  "image": ""
 }
