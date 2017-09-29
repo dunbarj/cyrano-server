@@ -14,7 +14,7 @@ var connection = mysql.createConnection({
 
 //===== Express =====//
 var app = express();
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
 function guid() {
@@ -42,7 +42,7 @@ app.post('/user/create', function(request, response) {
     var full_name = request.body.full_name;
     var password = request.body.password;
     
-    connection.query('INSERT INTO users (username, full_name, password) VALUES (' + username + ', ' + full_name + ', ' + password + ')', function (error, results, fields) {
+    connection.query('INSERT INTO users (username, full_name, password) VALUES (\'' + username + '\', \'' + full_name + '\', \'' + password + '\')', function (error, results, fields) {
         if (error) response.send(error);
         console.log(results);
         response.send(results);
