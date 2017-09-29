@@ -25,15 +25,6 @@ function guid() {
     return _p8() + _p8(true) + _p8(true) + _p8();
 }
 
-//TEST CALL
-app.get('/', function(request, response) {
-	connection.query('SELECT * FROM users', function (error, results, fields) {
-  		if (error) response.send(error);
-        console.log(results);
-  		response.send(results);
-	});
-});
-
 //Create a user
 //userid (auto), username, name, password, fbToken, currency
 //username, name, password
@@ -41,8 +32,7 @@ app.post('/user/create', function(request, response) {
     var username = request.body.username;
     var full_name = request.body.full_name;
     var password = request.body.password;
-    
-    connection.query('INSERT INTO users (username, full_name, password) VALUES (' + username + ', ' + full_name + ', ' + password + ')', function (error, results, fields) {
+    connection.query('INSERT INTO users (username, full_name, password) VALUES (\'' + username + '\', \'' + full_name + '\', \'' + password + '\')', function (error, results, fields) {
         if (error) response.send(error);
         console.log(results);
         response.send(results);
@@ -123,6 +113,7 @@ app.get('/user/:uid/posts', function(request, response) {
 
 //Create a post
 app.post('/post/create', function(request, response) {
+    console.log(request);
     var user_id = request.body.user_id,
         title = request.body.title,
         text_content = request.body.text_content,
@@ -130,7 +121,7 @@ app.post('/post/create', function(request, response) {
         category = request.body.category,
         bounty = request.body.bounty;
     
-    connection.query('INSERT INTO posts (user_id, title, text_content, image, category, bounty) VALUES (' + user_id + ', ' + title + ', ' + text_content + ', ' + image + ', ' + category + ', ' + bounty + ')', function (error, results, fields) {
+    connection.query('INSERT INTO posts (user_id, title, text_content, image, category, bounty) VALUES (\'' + user_id + '\', \'' + title + '\', \'' + text_content + '\', \'' + image + '\', \'' + category + '\', \'' + bounty + '\')', function (error, results, fields) {
         if (error) response.send(error);
         console.log(results);
         response.send(results);
