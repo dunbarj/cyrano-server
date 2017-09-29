@@ -123,12 +123,12 @@ app.get('/user/:uid/posts', function(request, response) {
 
 //Create a post
 app.post('/post/create', function(request, response) {
-    var user_id = response.body.user_id,
-        title = response.body.title,
-        text_content = response.body.text_content,
-        image = response.body.image,
-        category = response.body.category,
-        bounty = response.body.bounty;
+    var user_id = request.body.user_id,
+        title = request.body.title,
+        text_content = request.body.text_content,
+        image = request.body.image,
+        category = request.body.category,
+        bounty = request.body.bounty;
     
     connection.query('INSERT INTO posts (user_id, title, text_content, image, category, bounty) VALUES (' + user_id + ', ' + title + ', ' + text_content + ', ' + image + ', ' + category + ', ' + bounty + ')', function (error, results, fields) {
         if (error) response.send(error);
