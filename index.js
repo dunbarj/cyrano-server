@@ -71,12 +71,13 @@ app.get('/user/login', function(request, response) {
             if (user !== undefined) {
                 if (json.username === user.username && json.password === user.password) {
                     var gid = guid();
-                    user.cookie = gid;
+                    user.cookie = null;
                     user.password = null;
                     connection.query("UPDATE users SET cookie =\'" + gid +"\' WHERE username=\'" + json.username + "\'", function (er, res, fi) {
                         if (er) throw er;
 
                     });
+                    response.cookie('cookie', gid, { maxAge: 100000000000, httpOnly: true });
                     response.send(user);
                 } else { response.send("Username or Password Incorrect"); }
             } else { response.send("User for username does not exist");}
@@ -149,6 +150,16 @@ app.get('/post/search', function(request, response) {
 app.get('/post/feed', function(request, response) {
     console.log("Works")
     //SPRINT 1 - Traver
+    var json = request.query;
+    if(json.type === 'new') {
+        var sql = "SELECT * FROM posts ORDER BY time_created DESC LIMIT 50";
+        connection.query(sql, function (error, results, fields) {
+            if (error) throw error;
+            response.send(post);
+        });
+    }
+    else { response.sendStatus(400); }
+
 });
 
 //Get post
