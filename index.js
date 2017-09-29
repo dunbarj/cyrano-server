@@ -89,7 +89,7 @@ app.post('/user/:uid/edit', function(request, response) {
     var uid = request.params.uid;
     var username = request.body.username;
     var full_name = request.body.full_name;
-    connection.query('UPDATE users SET username = ' + username + ', full_name = ' + full_name + ' WHERE user_id = ' + uid, function (error, results, fields) {
+    connection.query('UPDATE users SET username = \'' + username + '\', full_name = \'' + full_name + '\' WHERE user_id = \'' + uid + '\'', function (error, results, fields) {
         if (error) response.send(error);
         console.log(results);
         response.send(results);
@@ -104,7 +104,7 @@ app.post('/user/:uid/follow', function(request, response) {
 //Get a user's posts
 app.get('/user/:uid/posts', function(request, response) {
     var uid = request.params.uid;
-    connection.query('SELECT * FROM posts WHERE user_id=' + uid, function (error, results, fields) {
+    connection.query('SELECT * FROM posts WHERE user_id=\'' + uid + '\'', function (error, results, fields) {
         if (error) response.send(error);
         console.log(results);
         response.send(results);
@@ -120,10 +120,17 @@ app.post('/post/create', function(request, response) {
         image = request.body.image,
         category = request.body.category,
         bounty = request.body.bounty;
-    
-    connection.query('INSERT INTO posts (user_id, title, text_content, image, category, bounty) VALUES (\'' + user_id + '\', \'' + title + '\', \'' + text_content + '\', \'' + image + '\', \'' + category + '\', \'' + bounty + '\')', function (error, results, fields) {
+    if (!image) {
+        image = "";
+    }
+    var date = new Date();
+    var datestr = date.getUTCFullYear() + "-" + (date.getUTCMonth()+1) + "-" + date.getUTCDate() + " " +
+    date.getUTCHours()+ ":" + date.getUTCMinutes() + ":" + date.getUTCSeconds();
+    console.log(datestr);
+    connection.query('INSERT INTO posts (user_id, time_created, title, text_content, image, category, bounty) VALUES (\'' +
+    user_id + '\', TIMESTAMP(\'' + datestr + '\'), \'' + title + '\', \'' + text_content + '\', \'' + image +
+    '\', \'' + category + '\', \'' + bounty + '\')', function (error, results, fields) {
         if (error) response.send(error);
-        console.log(results);
         response.send(results);
     });
 });
@@ -131,7 +138,7 @@ app.post('/post/create', function(request, response) {
 //Search for posts by category
 app.get('/post/search', function(request, response) {
     var category = request.query.category;
-    connection.query('SELECT * FROM posts WHERE category=' + category, function (error, results, fields) {
+    connection.query('SELECT * FROM posts WHERE category=\'' + category + '\'', function (error, results, fields) {
         if (error) response.send(error);
         console.log(results);
         response.send(results);
@@ -167,7 +174,7 @@ app.post('/post/:pid', function(request, response) {
     var postId = request.params.pid;
     var json = request.body;
     if (postId && json.text_content) {
-        var sql = "UPDATE posts SET text_context = " + json.text_content +" WHERE post_id=\'" + postId + "\'";
+        var sql = "UPDATE posts SET text_content = \'" + json.text_content +"\' WHERE post_id=\'" + postId + "\'";
         connection.query(sql, function (error, results, fields) {
             if (error) throw error;
             response.send(results)
@@ -180,7 +187,7 @@ app.delete('/post/:pid', function(request, response) {
     //SPRINT 1 - Traver
     var postId = request.params.pid;
     if (postId) {
-        var sql = "DELETE FROM WHERE post_id=\'" + postId + "\'";
+        var sql = "DELETE FROM posts WHERE post_id=\'" + postId + "\'";
         connection.query(sql, function (error, results, fields) {
             if (error) throw error;
             response.send(results)
@@ -199,8 +206,8 @@ app.post('/post/:pid/reply', function(request, response) {
     var postId = request.params.pid;
     var json = request.body;
     if (postId && json.user_id && json.text_content) {
-        var sql = "INSERT INTO replies (post_id, user_id, text_content) value (" + postId + ", " + json.user_id +
-        ", " + json.text_content + ")";
+        var sql = "INSERT INTO replies (post_id, user_id, text_content) value (\'" + postId + "\', \'" + json.user_id +
+        "\', \'" + json.text_content + "\')";
         connection.query(sql, function (error, results, fields) {
             if (error) throw error;
             response.send(results)
