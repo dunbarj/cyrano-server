@@ -17,6 +17,14 @@ var app = express();
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
+function guid() {
+    function _p8(s) {
+        var p = (Math.random().toString(16)+"000000000").substr(2,8);
+        return s ? "" + p.substr(0,4) + "" + p.substr(4,4) : p ;
+    }
+    return _p8() + _p8(true) + _p8(true) + _p8();
+}
+
 //TEST CALL
 app.get('/', function(request, response) {
 	connection.query('SELECT * FROM users', function (error, results, fields) {
@@ -52,6 +60,8 @@ app.get('/user/', function(request, response) {
             if (error) throw error;
             var user = results[0];
             if (user !== undefined) {
+                user.password = null;
+                user.cookie = null;
                 response.send(user);
             } else { response.send("User with cookie does not exist");}
         });
@@ -70,6 +80,13 @@ app.get('/user/login', function(request, response) {
             var user = results[0];
             if (user !== undefined) {
                 if (json.username === user.username && json.password === user.password) {
+                    var gid = guid();
+                    user.cookie = gid;
+                    user.password = null;
+                    connection.query("UPDATE users SET cookie =\'" + gid +"\' WHERE username=\'" + json.username + "\'", function (er, res, fi) {
+                        if (er) throw er;
+
+                    });
                     response.send(user);
                 } else { response.send("Username or Password Incorrect"); }
             } else { response.send("User for username does not exist");}
