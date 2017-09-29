@@ -192,7 +192,7 @@ app.post('/post/:pid/reply', function(request, response) {
     var json = request.body;
     if (postId && json.user_id && json.text_content) {
         var sql = "INSERT INTO replies (post_id, user_id, text_content) value (" + postId + ", " + json.user_id +
-        ", " + json.text_content + ");
+        ", " + json.text_content + ")";
         connection.query(sql, function (error, results, fields) {
             if (error) throw error;
             response.send(results)
