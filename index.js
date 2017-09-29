@@ -77,7 +77,7 @@ app.get('/user/login', function(request, response) {
                         if (er) throw er;
 
                     });
-                    response.cookie('cookie', gid, { maxAge: 100000000000, httpOnly: true });
+                    response.cookie('cookie', gid, { maxAge: 100000000000, httpOnly: false });
                     response.send(user);
                 } else { response.send("Username or Password Incorrect"); }
             } else { response.send("User for username does not exist");}
@@ -155,10 +155,15 @@ app.get('/post/feed', function(request, response) {
         var sql = "SELECT * FROM posts ORDER BY time_created DESC LIMIT 50";
         connection.query(sql, function (error, results, fields) {
             if (error) throw error;
-            response.send(post);
+            response.send(results);
         });
-    }
-    else { response.sendStatus(400); }
+    } else if (json.type === 'top') {
+        var sql = "SELECT * FROM posts ORDER BY (up_votes-down_Votes)*10 + views DESC LIMIT 50";
+        connection.query(sql, function (error, results, fields) {
+            if (error) throw error;
+            response.send(results);
+        });
+    } else { response.sendStatus(400); }
 
 });
 
