@@ -2,7 +2,10 @@ var express = require('express'),
     request = require('request'),
     bodyParser = require('body-parser'),
     config = require('./config.js'),
-    mysql = require('mysql');
+    mysql = require('mysql')
+    crypto = require('crypto'),
+    algorithm = 'aes-256-ctr',
+    password = 'JWsmDm5gdkhW4Phm';
 
 var connection = mysql.createConnection({
   host     : config.host,
@@ -25,13 +28,26 @@ function guid() {
     return _p8() + _p8(true) + _p8(true) + _p8();
 }
 
+function encrypt(text){
+  var cipher = crypto.createCipher(algorithm,password)
+  var crypted = cipher.update(text,'utf8','hex')
+  crypted += cipher.final('hex');
+  return crypted;
+}
+
+function decrypt(text){
+  var decipher = crypto.createDecipher(algorithm,password)
+  var dec = decipher.update(text,'hex','utf8')
+  dec += decipher.final('utf8');
+  return dec;
+}
 //Create a user
 //userid (auto), username, name, password, fbToken, currency
 //username, name, password
 app.post('/user/create', function(request, response) {
     var username = request.body.username;
     var full_name = request.body.full_name;
-    var password = request.body.password;
+    var password = encrypt(request.body.password);
     connection.query('INSERT INTO users (username, full_name, password) VALUES (\'' + username + '\', \'' + full_name + '\', \'' + password + '\')', function (error, results, fields) {
         if (error) response.send(error);
         console.log(results);
@@ -45,7 +61,7 @@ app.get('/user/', function(request, response) {
     console.log("Server Success");
     var json = request.query;
     if (json.cookie) {
-        var sql = "SELECT * FROM users WHERE cookie=\'" + json.cookie + "\'";
+        var sql = "SELECT * FROM users WHERE cookie=\'" + encrypt(json.cookie) + "\'";
         connection.query(sql, function (error, results, fields) {
             if (error) throw error;
             var user = results[0];
@@ -64,16 +80,17 @@ app.get('/user/login', function(request, response) {
     //SPRINT 1 - Traver
     var json = request.query;
     if (json.username && json.password) {
+        var password = encrypt(json.password);
         var sql = "SELECT * FROM users WHERE username=\'" + json.username + "\'";
         connection.query(sql, function (error, results, fields) {
             if (error) throw error;
             var user = results[0];
             if (user !== undefined) {
-                if (json.username === user.username && json.password === user.password) {
+                if (json.username === user.username && password === user.password) {
                     var gid = guid();
                     user.cookie = null;
                     user.password = null;
-                    connection.query("UPDATE users SET cookie =\'" + gid +"\' WHERE username=\'" + json.username + "\'", function (er, res, fi) {
+                    connection.query("UPDATE users SET cookie =\'" + encrypt(gid) +"\' WHERE username=\'" + json.username + "\'", function (er, res, fi) {
                         if (er) throw er;
 
                     });
