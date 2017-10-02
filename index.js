@@ -41,6 +41,7 @@ function decrypt(text){
   dec += decipher.final('utf8');
   return dec;
 }
+
 //Create a user
 //userid (auto), username, name, password, fbToken, currency
 //username, name, password
@@ -72,7 +73,6 @@ app.get('/user/', function(request, response) {
             } else { response.send("User with cookie does not exist");}
         });
     } else { response.sendStatus(400); }
-
 });
 
 //User Login
@@ -194,7 +194,7 @@ app.get('/post/:pid', function(request, response) {
             if (error) throw error;
             var post = results[0];
             if (post !== undefined) {
-                response.send(post)
+                response.send(post);
             } else { response.send("Post does not exist");}
         });
     } else { response.sendStatus(400); }
@@ -210,7 +210,7 @@ app.post('/post/:pid', function(request, response) {
         var sql = "UPDATE posts SET text_content = \'" + json.text_content +"\' WHERE post_id=\'" + postId + "\'";
         connection.query(sql, function (error, results, fields) {
             if (error) throw error;
-            response.send(results)
+            response.send(results);
         });
     } else { response.sendStatus(400); }
 });
@@ -223,7 +223,7 @@ app.delete('/post/:pid', function(request, response) {
         var sql = "DELETE FROM posts WHERE post_id=\'" + postId + "\'";
         connection.query(sql, function (error, results, fields) {
             if (error) throw error;
-            response.send(results)
+            response.send(results);
         });
     } else { response.sendStatus(400); }
 });
@@ -243,7 +243,7 @@ app.post('/post/:pid/reply', function(request, response) {
         "\', \'" + json.text_content + "\')";
         connection.query(sql, function (error, results, fields) {
             if (error) throw error;
-            response.send(results)
+            response.send(results);
         });
     } else { response.sendStatus(400); }
 });
@@ -255,7 +255,14 @@ app.get('/post/:pid/vote', function(request, response) {
 
 //Get all post replies
 app.get('/post/:pid/reply/all', function(request, response) {
-    
+    var postid = request.params.pid;
+    if (postid) {
+        var sql = "SELECT * FROM replies WHERE post_id=" + postid;
+        connection.query(sql, function (error, results, fields) {
+            if (error) throw error;
+            response.send(results);
+        });
+    } else { response.sendStatus(400); }
 });
 
 //Get a specific reply to a post
