@@ -122,7 +122,7 @@ app.post('/user/:uid/follow', function(request, response) {
 //Get a user's posts
 app.get('/user/:uid/posts', function(request, response) {
     var uid = request.params.uid;
-    connection.query('SELECT * FROM posts WHERE user_id=\'' + uid + '\'', function (error, results, fields) {
+    connection.query('SELECT * FROM posts WHERE user_id=' + uid, function (error, results, fields) {
         if (error) response.send(error);
         console.log(results);
         response.send(results);
