@@ -107,7 +107,7 @@ app.post('/user/:uid/edit', function(request, response) {
     var uid = request.params.uid;
     var username = request.body.username;
     var full_name = request.body.full_name;
-    connection.query('UPDATE users SET username = \'' + username + '\', full_name = \'' + full_name + '\' WHERE user_id = \'' + uid + '\'', function (error, results, fields) {
+    connection.query('UPDATE users SET username = \'' + username + '\', full_name = \'' + full_name + '\' WHERE user_id = ' + uid, function (error, results, fields) {
         if (error) response.send(error);
         console.log(results);
         response.send(results);
