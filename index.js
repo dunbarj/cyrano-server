@@ -257,7 +257,8 @@ app.get('/post/:pid/vote', function(request, response) {
 app.get('/post/:pid/reply/all', function(request, response) {
     var postid = request.params.pid;
     if (postid) {
-        var sql = "SELECT * FROM replies WHERE post_id=" + postid;
+        var sql = "SELECT reply_id, post_id, replies.user_id, text_content, image, is_best_answer, username FROM replies"+
+         " INNER JOIN users ON replies.user_id=users.user_id WHERE post_id=" + postid;
         connection.query(sql, function (error, results, fields) {
             if (error) throw error;
             response.send(results);
