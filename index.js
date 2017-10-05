@@ -109,7 +109,6 @@ app.post('/user/:uid/edit', function(request, response) {
     var full_name = request.body.full_name;
     connection.query('UPDATE users SET username = \'' + username + '\', full_name = \'' + full_name + '\' WHERE user_id = ' + uid, function (error, results, fields) {
         if (error) response.send(error);
-        console.log(results);
         response.send(results);
     });
 });
@@ -124,7 +123,11 @@ app.get('/user/:uid/posts', function(request, response) {
     var uid = request.params.uid;
     connection.query('SELECT * FROM posts WHERE user_id=' + uid, function (error, results, fields) {
         if (error) response.send(error);
-        console.log(results);
+        var i = 0;
+        for (i = 0; i < results.length; i++) {
+            results[i].title = unescape(results[i].title);
+            results[i].text_content = unescape(results[i].text_content);
+        }
         response.send(results);
     });
 });
