@@ -146,7 +146,7 @@ app.post('/post/create', function(request, response) {
     date.getUTCHours()+ ":" + date.getUTCMinutes() + ":" + date.getUTCSeconds();
     console.log(datestr);
     connection.query('INSERT INTO posts (user_id, time_created, title, text_content, image, category, bounty) VALUES (\'' +
-    user_id + '\', TIMESTAMP(\'' + datestr + '\'), \'' + title + '\', \'' + text_content + '\', \'' + image +
+    user_id + '\', TIMESTAMP(\'' + datestr + '\'), \'' + escape(title) + '\', \'' + escape(text_content) + '\', \'' + image +
     '\', \'' + category + '\', \'' + bounty + '\')', function (error, results, fields) {
         if (error) response.send(error);
         response.send(results);
@@ -158,7 +158,11 @@ app.get('/post/search', function(request, response) {
     var category = request.query.category;
     connection.query('SELECT * FROM posts WHERE category=\'' + category + '\'', function (error, results, fields) {
         if (error) response.send(error);
-        console.log(results);
+        var i = 0;
+        for (i = 0; i < results.length; i++) {
+            results[i].title = unescape(results[i].title);
+            results[i].text_content = unescape(results[i].text_content);
+        }
         response.send(results);
     });
 });
@@ -172,12 +176,21 @@ app.get('/post/feed', function(request, response) {
         var sql = "SELECT * FROM posts ORDER BY time_created DESC LIMIT 50";
         connection.query(sql, function (error, results, fields) {
             if (error) throw error;
+            var i = 0;
+            for (i = 0; i < results.length; i++) {
+                results[i].title = unescape(results[i].title);
+                results[i].text_content = unescape(results[i].text_content);
+            }
             response.send(results);
         });
     } else if (json.type === 'top') {
         var sql = "SELECT * FROM posts ORDER BY (up_votes-down_Votes)*10 + views DESC LIMIT 50";
         connection.query(sql, function (error, results, fields) {
             if (error) throw error;
+            for (i = 0; i < results.length; i++) {
+                results[i].title = unescape(results[i].title);
+                results[i].text_content = unescape(results[i].text_content);
+            }
             response.send(results);
         });
     } else { response.sendStatus(400); }
@@ -194,6 +207,8 @@ app.get('/post/:pid', function(request, response) {
             if (error) throw error;
             var post = results[0];
             if (post !== undefined) {
+                post.title = unescape(post.title);
+                post.text_content = unescape(post.text_content);
                 response.send(post);
             } else { response.send("Post does not exist");}
         });
@@ -207,7 +222,7 @@ app.post('/post/:pid', function(request, response) {
     var postId = request.params.pid;
     var json = request.body;
     if (postId && json.text_content) {
-        var sql = "UPDATE posts SET text_content = \'" + json.text_content +"\' WHERE post_id=\'" + postId + "\'";
+        var sql = "UPDATE posts SET text_content = \'" + escape(json.text_content) +"\' WHERE post_id=\'" + postId + "\'";
         connection.query(sql, function (error, results, fields) {
             if (error) throw error;
             response.send(results);
@@ -240,7 +255,7 @@ app.post('/post/:pid/reply', function(request, response) {
     var json = request.body;
     if (postId && json.user_id && json.text_content) {
         var sql = "INSERT INTO replies (post_id, user_id, text_content) value (\'" + postId + "\', \'" + json.user_id +
-        "\', \'" + json.text_content + "\')";
+        "\', \'" + escape(json.text_content) + "\')";
         connection.query(sql, function (error, results, fields) {
             if (error) throw error;
             response.send(results);
@@ -261,6 +276,10 @@ app.get('/post/:pid/reply/all', function(request, response) {
          " INNER JOIN users ON replies.user_id=users.user_id WHERE post_id=" + postid;
         connection.query(sql, function (error, results, fields) {
             if (error) throw error;
+            var i = 0;
+            for (i = 0; i < results.length; i++) {
+                results[i].text_content = unescape(results[i].text_content);
+            }
             response.send(results);
         });
     } else { response.sendStatus(400); }
