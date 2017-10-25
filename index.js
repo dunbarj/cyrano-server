@@ -15,6 +15,10 @@ var connection = mysql.createConnection({
   database : config.database
 });
 
+var post_report_threshold = 3;
+var reply_report_threshold = 3;
+
+
 //===== Express =====//
 var app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -351,8 +355,8 @@ app.post('/post/:pid/vote', function(request, response) {
 app.post('/post/:pid/report', function(request, response) {
     var postId = request.params.pid;
     var json = request.body;
-    if (postId && json.user_id && json.report_code) {
-         var check_query = "SELECT * FROM posts WHERE post_id=\'" + postId + "\'";
+    if (postId && json.user_id) {
+        var check_query = "SELECT * FROM posts WHERE post_id=\'" + postId + "\'";
         connection.query(check_query, function(error, check_results, fields) {
             if (check_results.length <= 0) {
                 console.log("Post does not exist in database!");
@@ -373,7 +377,21 @@ app.post('/post/:pid/report', function(request, response) {
                     + json.report_code + "\')";
                 connection.query(insert_query, function(error, insert_results, fields) {
                     if (error) throw error;
-                    response.send(insert_results);
+                    //Check if post should be hidden for review by administration
+                    var check_num_query = "SELECT * FROM reported_posts WHERE post_id=\'" + postId + "\'";
+                    connection.query(check_num_query, function(error, check_num_results, fields) {
+                        if (check_num_results.length >= post_report_threshold) {
+                            //Hide the post for review
+                            var hide_query = "UPDATE posts SET hide_for_reporting = CASE\nWHEN hide_for_reporting = 2 THEN 2\nELSE 1\nEND WHERE post_id=\'" + postId + "\'";
+                            connection.query(hide_query, function(error, hide_results, fields) {
+                                if (error) throw error;
+                                response.send(hide_results);
+                                return;
+                            });
+                        } else {
+                            response.send(insert_results);
+                        }
+                    });
                 });
             });
         });
@@ -487,7 +505,7 @@ app.post('/post/:pid/reply/:rid/report', function(request, response) {
     var postId = request.params.pid;
     var replyId = request.params.rid;
     var json = request.body;
-    if (postId && replyId && json.user_id && json.report_code) {
+    if (postId && replyId && json.user_id) {
         var check_query = "SELECT * FROM replies WHERE reply_id=\'" + replyId + "\'";
         connection.query(check_query, function(error, check_results, fields) {
             if (check_results.length <= 0) {
@@ -509,7 +527,22 @@ app.post('/post/:pid/reply/:rid/report', function(request, response) {
                     + json.report_code + "\')";
                 connection.query(insert_query, function(error, insert_results, fields) {
                     if (error) throw error;
-                    response.send(insert_results);
+                    
+                    //Check if reply should be hidden for review by administration
+                    var check_num_query = "SELECT * FROM reported_replies WHERE reply_id=\'" + replyId + "\'";
+                    connection.query(check_num_query, function(error, check_num_results, fields) {
+                        if (check_num_results.length >= reply_report_threshold) {
+                            //Hide the reply for review
+                            var hide_query = "UPDATE replies SET hide_for_reporting = CASE WHEN hide_for_reporting = 2 THEN 2 ELSE 1 END WHERE reply_id=\'" + replyId + "\'";
+                            connection.query(hide_query, function(error, hide_results, fields) {
+                                if (error) throw error;
+                                response.send(hide_results);
+                                return;
+                            });
+                        } else {
+                            response.send(insert_results);
+                        }
+                    });
                 });
             });
         });
