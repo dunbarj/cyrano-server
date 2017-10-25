@@ -248,7 +248,15 @@ app.delete('/post/:pid', function(request, response) {
 
 //Close a post
 app.post('/post/:pid/close', function(request, response) {
-    
+    var postId = request.params.pid;
+    var json = request.body;
+    if (postId && json.reply_id) {
+        var sql = "UPDATE replies SET is_best_answer = 1 WHERE reply_id=\'" + json.reply_id + "\'";
+        connection.query(sql, function (error, results, fields) {
+            if (error) throw error;
+            response.send(results);
+        });
+    } else { response.sendStatus(400); }
 });
 
 //Reply to a post
@@ -274,9 +282,11 @@ app.get('/post/:pid/vote', function(request, response) {
 //Get all post replies
 app.get('/post/:pid/reply/all', function(request, response) {
     var postid = request.params.pid;
-    if (postid) {
-        var sql = "SELECT reply_id, post_id, replies.user_id, text_content, image, is_best_answer, username FROM replies"+
-         " INNER JOIN users ON replies.user_id=users.user_id WHERE post_id=" + postid;
+    var userid = request.query.user_id;
+    if (postid && userid) {
+        var sql = "SELECT reply_id, post_id, replies.user_id, text_content, image, is_best_answer, username FROM replies " +
+        "INNER JOIN users ON replies.user_id=users.user_id WHERE CASE WHEN ((SELECT user_id FROM posts WHERE post_id =" + postid +
+         ") =" + userid + ") THEN post_id =" + postid + " AND is_hidden = 0 ELSE post_id = 1 END";
         connection.query(sql, function (error, results, fields) {
             if (error) throw error;
             var i = 0;
@@ -305,7 +315,15 @@ app.post('/post/:pid/reply/:rid/vote', function(request, response) {
 
 //Hide a post
 app.post('/post/:pid/reply/:rid/hide', function(request, response) {
-    
+    var postId = request.params.pid;
+    var replyId = request.params.rid;
+    if (postId && replyId) {
+        var sql = "UPDATE replies SET is_hidden = 1 WHERE reply_id=\'" + replyId + "\'";
+        connection.query(sql, function (error, results, fields) {
+            if (error) throw error;
+            response.send(results);
+        });
+    } else { response.sendStatus(400); }
 });
 
 //Report a post
