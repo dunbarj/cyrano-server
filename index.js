@@ -164,6 +164,7 @@ app.post('/post/create', function(request, response) {
 app.get('/post/search', function(request, response) {
     var category = request.query.category;
     var keyword = request.query.keyword;
+    var top = request.query.top;
     
     var query = 'SELECT * FROM posts';
     if (category) {
@@ -172,30 +173,51 @@ app.get('/post/search', function(request, response) {
     if (keyword) {
         query += (!category ? ' WHERE ' : '') + 'title LIKE \'%' + keyword + '%\'';
     }
+    if (top != null) {
+        if (top) {
+            //Sort by decreasing upvote score
+            query += ' ORDER BY (up_votes - down_votes) DESC';
+        } else {
+            //Sort by increasing upvote score
+            query += ' ORDER BY (up_votes - down_votes) ASC';
+        }
+    }
     console.log(query);
     connection.query(query, function (error, results, fields) {
         if (error) response.send(error);
-        var keyword_query = 'SELECT * FROM posts WHERE '
-        + (category ? 'category=\'' + category + '\' AND ' : '')
-        + 'post_id in (SELECT post_id FROM post_keywords WHERE keyword LIKE \'%' + keyword + '%\')';
-        console.log(keyword_query);
-        connection.query(keyword_query, function (error, keyword_results, fields) {
-            if (error) response.send(error);
-            var final_results = results.concat(keyword_results);
-            var i = 0;
-            for (i = 0; i < final_results.length; i++) {
-                final_results[i].title = unescape(final_results[i].title);
-                final_results[i].text_content = unescape(final_results[i].text_content);
+        if (keyword) {
+            var keyword_query = 'SELECT * FROM posts WHERE '
+            + (category ? 'category=\'' + category + '\' AND ' : '')
+            + 'post_id in (SELECT post_id FROM post_keywords WHERE keyword LIKE \'%' + keyword + '%\')';
+            if (top != null) {
+                if (top) {
+                    //Sort by decreasing upvote score
+                    keyword_query += ' ORDER BY (up_votes - down_votes) DESC';
+                } else {
+                    //Sort by increasing upvote score
+                    keyword_query += ' ORDER BY (up_votes - down_votes) ASC';
+                }
             }
-            response.send(final_results);
-        });
+            console.log(keyword_query);
+            connection.query(keyword_query, function (error, keyword_results, fields) {
+                if (error) response.send(error);
+                var final_results = results.concat(keyword_results);
+                var i = 0;
+                for (i = 0; i < final_results.length; i++) {
+                    final_results[i].title = unescape(final_results[i].title);
+                    final_results[i].text_content = unescape(final_results[i].text_content);
+                }
+                response.send(final_results);
+            });
+        } else {
+            response.send(results);
+            return;
+        }
     });
 });
 
 //Get the feed
 app.get('/post/feed', function(request, response) {
-    console.log("Works")
-    //SPRINT 1 - Traver
     var json = request.query;
     if(json.type === 'new') {
         var sql = "SELECT * FROM posts ORDER BY time_created DESC LIMIT 50";
@@ -209,7 +231,7 @@ app.get('/post/feed', function(request, response) {
             response.send(results);
         });
     } else if (json.type === 'top') {
-        var sql = "SELECT * FROM posts ORDER BY (up_votes-down_Votes)*10 + views DESC LIMIT 50";
+        var sql = "SELECT * FROM posts ORDER BY (up_votes-down_votes)*10 + views DESC LIMIT 50";
         connection.query(sql, function (error, results, fields) {
             if (error) throw error;
             for (i = 0; i < results.length; i++) {
