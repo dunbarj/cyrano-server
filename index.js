@@ -336,7 +336,39 @@ app.post('/post/:pid/vote', function(request, response) {
                 connection.query(post_update_query, function(error, update_results, fields) {
                     if (error) throw error;
                     response.send(update_results);
+                });
+            });
+        });
+    } else { response.sendStatus(400); }
+});
+
+//Report a post
+app.post('/post/:pid/report', function(request, response) {
+    var postId = request.params.pid;
+    var json = request.body;
+    if (postId && json.user_id && json.report_code) {
+         var check_query = "SELECT * FROM posts WHERE post_id=\'" + postId + "\'";
+        connection.query(check_query, function(error, check_results, fields) {
+            if (check_results.length <= 0) {
+                console.log("Post does not exist in database!");
+                response.sendStatus(400);
+                return;
+            }
+            var query = "SELECT * FROM reported_posts WHERE post_id=\'" + postId + "\' AND user_id=\'" + json.user_id + "\'";
+            connection.query(query, function (error, results, fields) {
+                if (error) throw error;
+                if (results.length > 0) {
+                    console.log("User has already reported this post!");
+                    response.sendStatus(400);
                     return;
+                }
+                var insert_query = "INSERT INTO reported_posts (post_id, user_id, report_code) VALUES (\'"
+                    + postId + "\', \'"
+                    + json.user_id + "\', \'"
+                    + json.report_code + "\')";
+                connection.query(insert_query, function(error, insert_results, fields) {
+                    if (error) throw error;
+                    response.send(insert_results);
                 });
             });
         });
@@ -426,14 +458,13 @@ app.post('/post/:pid/reply/:rid/vote', function(request, response) {
                 connection.query(reply_update_query, function(error, update_results, fields) {
                     if (error) throw error;
                     response.send(update_results);
-                    return;
                 });
             });
         });
     } else { response.sendStatus(400); }
 });
 
-//Hide a post
+//Hide a reply to a post
 app.post('/post/:pid/reply/:rid/hide', function(request, response) {
     var postId = request.params.pid;
     var replyId = request.params.rid;
@@ -446,9 +477,38 @@ app.post('/post/:pid/reply/:rid/hide', function(request, response) {
     } else { response.sendStatus(400); }
 });
 
-//Report a post
+//Report a reply to a post
 app.post('/post/:pid/reply/:rid/report', function(request, response) {
-    
+    var postId = request.params.pid;
+    var replyId = request.params.rid;
+    var json = request.body;
+    if (postId && replyId && json.user_id && json.report_code) {
+        var check_query = "SELECT * FROM replies WHERE reply_id=\'" + replyId + "\'";
+        connection.query(check_query, function(error, check_results, fields) {
+            if (check_results.length <= 0) {
+                console.log("Reply does not exist in database!");
+                response.sendStatus(400);
+                return;
+            }
+            var query = "SELECT * FROM reported_replies WHERE reply_id=\'" + replyId + "\' AND user_id=\'" + json.user_id + "\'";
+            connection.query(query, function (error, results, fields) {
+                if (error) throw error;
+                if (results.length > 0) {
+                    console.log("User has already reported this reply!");
+                    response.sendStatus(400);
+                    return;
+                }
+                var insert_query = "INSERT INTO reported_replies (reply_id, user_id, report_code) VALUES (\'"
+                    + replyId + "\', \'"
+                    + json.user_id + "\', \'"
+                    + json.report_code + "\')";
+                connection.query(insert_query, function(error, insert_results, fields) {
+                    if (error) throw error;
+                    response.send(insert_results);
+                });
+            });
+        });
+    } else { response.sendStatus(400); }
 });
 
 //Admin delete a post
