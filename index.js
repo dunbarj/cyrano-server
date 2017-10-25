@@ -251,10 +251,15 @@ app.post('/post/:pid/close', function(request, response) {
     var postId = request.params.pid;
     var json = request.body;
     if (postId && json.reply_id) {
+
         var sql = "UPDATE replies SET is_best_answer = 1 WHERE reply_id=\'" + json.reply_id + "\'";
         connection.query(sql, function (error, results, fields) {
             if (error) throw error;
-            response.send(results);
+            var sql1 = "UPDATE posts SET has_best_answer = 1 WHERE post_id=\'" + postId + "\'";
+            connection.query(sql1, function (error1, results1, fields1) {
+                if (error1) throw error1;
+                response.send(results);
+            });
         });
     } else { response.sendStatus(400); }
 });
@@ -286,7 +291,7 @@ app.get('/post/:pid/reply/all', function(request, response) {
     if (postid && userid) {
         var sql = "SELECT reply_id, post_id, replies.user_id, text_content, image, is_best_answer, username FROM replies " +
         "INNER JOIN users ON replies.user_id=users.user_id WHERE CASE WHEN ((SELECT user_id FROM posts WHERE post_id =" + postid +
-         ") =" + userid + ") THEN post_id =" + postid + " AND is_hidden = 0 ELSE post_id = 1 END";
+         ") =" + userid + ") THEN post_id =" + postid + " AND is_hidden = 0 ELSE post_id = "+ postid +" END";
         connection.query(sql, function (error, results, fields) {
             if (error) throw error;
             var i = 0;
