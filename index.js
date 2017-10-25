@@ -159,14 +159,32 @@ app.post('/post/create', function(request, response) {
 //Search for posts by category
 app.get('/post/search', function(request, response) {
     var category = request.query.category;
-    connection.query('SELECT * FROM posts WHERE category=\'' + category + '\'', function (error, results, fields) {
+    var keyword = request.query.keyword;
+    
+    var query = 'SELECT * FROM posts';
+    if (category) {
+        query += ' WHERE category=\'' + category + '\'' + (keyword ? ' AND ' : '');
+    }
+    if (keyword) {
+        query += (!category ? ' WHERE ' : '') + 'title LIKE \'%' + keyword + '%\'';
+    }
+    console.log(query);
+    connection.query(query, function (error, results, fields) {
         if (error) response.send(error);
-        var i = 0;
-        for (i = 0; i < results.length; i++) {
-            results[i].title = unescape(results[i].title);
-            results[i].text_content = unescape(results[i].text_content);
-        }
-        response.send(results);
+        var keyword_query = 'SELECT * FROM posts WHERE '
+        + (category ? 'category=\'' + category + '\' AND ' : '')
+        + 'post_id in (SELECT post_id FROM post_keywords WHERE keyword LIKE \'%' + keyword + '%\')';
+        console.log(keyword_query);
+        connection.query(keyword_query, function (error, keyword_results, fields) {
+            if (error) response.send(error);
+            var final_results = results.concat(keyword_results);
+            var i = 0;
+            for (i = 0; i < final_results.length; i++) {
+                final_results[i].title = unescape(final_results[i].title);
+                final_results[i].text_content = unescape(final_results[i].text_content);
+            }
+            response.send(final_results);
+        });
     });
 });
 
@@ -202,7 +220,6 @@ app.get('/post/feed', function(request, response) {
 
 //Get post
 app.get('/post/:pid', function(request, response) {
-    //SPRINT 1 - Traver
     var postId = request.params.pid;
     if (postId) {
         var sql = "SELECT * FROM posts WHERE post_id=\'" + postId + "\'";
@@ -270,7 +287,7 @@ app.post('/post/:pid/reply', function(request, response) {
     var postId = request.params.pid;
     var json = request.body;
     if (postId && json.user_id && json.text_content) {
-        var sql = "INSERT INTO replies (post_id, user_id, text_content) value (\'" + postId + "\', \'" + json.user_id +
+        var sql = "INSERT INTO replies (post_id, user_id, text_content) values (\'" + postId + "\', \'" + json.user_id +
         "\', \'" + escape(json.text_content) + "\')";
         connection.query(sql, function (error, results, fields) {
             if (error) throw error;
@@ -280,8 +297,55 @@ app.post('/post/:pid/reply', function(request, response) {
 });
 
 //Vote on a post
-app.get('/post/:pid/vote', function(request, response) {
-    
+app.post('/post/:pid/vote', function(request, response) {
+    var postId = request.params.pid;
+    var json = request.body;
+    if (postId && json.user_id && json.vote) {
+        json.vote = (json.vote > 0 ? 1 : -1);
+        var query = 'SELECT * FROM user_votes_post WHERE user_id=\'' + json.user_id + '\' AND post_id=\'' + postId + '\'';
+        connection.query(query, function(error, results, fields) {
+            if (error) throw error;
+            var vote_query = '';
+            if (results.length > 0) {
+                //Entry already exists
+                console.log("Found existing post vote entry");
+                if (results[0].vote == json.vote) {
+                    response.sendStatus(400);
+                    return;
+                }
+                vote_query = 'UPDATE user_votes_post SET vote=\'' + json.vote 
+                    + '\' WHERE user_id=\'' + json.user_id
+                    + '\' AND post_id=\'' + postId + '\'';
+            } else {
+                //Entry does not exist
+                console.log("Did not find existing post vote entry");
+                vote_query = 'INSERT INTO user_votes_post (user_id, post_id, vote) VALUES (\'' 
+                    + json.user_id + '\', \'' 
+                    + postId + '\', \''
+                    + json.vote + '\')';
+            }
+            connection.query(vote_query, function(error, vote_results, fields) {
+                if (error) throw error;
+                var post_update_query = '';
+                if (results.length > 0) {
+                    post_update_query = 'UPDATE posts SET up_votes = up_votes + ' + json.vote 
+                        + ', down_votes = down_votes - ' + json.vote + ' WHERE post_id=\'' + postId + '\'';
+                } else {
+                    if (json.vote > 0) {
+                        post_update_query = 'UPDATE posts SET up_votes = up_votes + 1 WHERE post_id=\'' + postId + '\'';
+                    } else {
+                        post_update_query = 'UPDATE posts SET down_votes = down_votes + 1 WHERE post_id=\'' + postId + '\'';
+                    }
+                }
+                console.log(post_update_query);
+                connection.query(post_update_query, function(error, update_results, fields) {
+                    if (error) throw error;
+                    response.send(update_results);
+                    return;
+                });
+            });
+        });
+    } else { response.sendStatus(400); }
 });
 
 //Get all post replies
@@ -310,12 +374,68 @@ app.get('/post/:pid/reply/:rid', function(request, response) {
 
 //Delete a reply
 app.delete('/post/:pid/reply/:rid', function(request, response) {
-    
+    var postId = request.params.pid;
+    var replyId = request.params.rid;
+    if (postId) {
+        var sql = "DELETE FROM replies WHERE post_id=\'" + postId + "\' AND reply_id=\'" + replyId + "\'";
+        connection.query(sql, function (error, results, fields) {
+            if (error) throw error;
+            response.send(results);
+        });
+    } else { response.sendStatus(400); }
 });
 
-//Vote on a post
+//Vote on a reply to a post
 app.post('/post/:pid/reply/:rid/vote', function(request, response) {
-    
+    var postId = request.params.pid;
+    var replyId = request.params.rid;
+    var json = request.body;
+    if (postId && replyId && json.user_id && json.vote) {
+        json.vote = (json.vote > 0 ? 1 : -1);
+        var query = 'SELECT * FROM user_votes_reply WHERE user_id=\'' + json.user_id + '\' AND reply_id=\'' + replyId + '\'';
+        connection.query(query, function(error, results, fields) {
+            if (error) throw error;
+            var vote_query = '';
+            if (results.length > 0) {
+                //Entry already exists
+                console.log("Found existing reply vote entry");
+                if (results[0].vote == json.vote) {
+                    response.sendStatus(400);
+                    return;
+                }
+                vote_query = 'UPDATE user_votes_reply SET vote=\'' + json.vote 
+                    + '\' WHERE user_id=\'' + json.user_id
+                    + '\' AND reply_id=\'' + replyId + '\'';
+            } else {
+                //Entry does not exist
+                console.log("Did not find existing reply vote entry");
+                vote_query = 'INSERT INTO user_votes_reply (user_id, reply_id, vote) VALUES (\'' 
+                    + json.user_id + '\', \'' 
+                    + replyId + '\', \''
+                    + json.vote + '\')';
+            }
+            connection.query(vote_query, function(error, vote_results, fields) {
+                if (error) throw error;
+                var reply_update_query = '';
+                if (results.length > 0) {
+                    reply_update_query = 'UPDATE replies SET up_votes = up_votes + ' + json.vote 
+                        + ', down_votes = down_votes - ' + json.vote + ' WHERE reply_id=\'' + replyId + '\'';
+                } else {
+                    if (json.vote > 0) {
+                        reply_update_query = 'UPDATE replies SET up_votes = up_votes + 1 WHERE reply_id=\'' + replyId + '\'';
+                    } else {
+                        reply_update_query = 'UPDATE replies SET down_votes = down_votes + 1 WHERE reply_id=\'' + replyId + '\'';
+                    }
+                }
+                console.log(reply_update_query);
+                connection.query(reply_update_query, function(error, update_results, fields) {
+                    if (error) throw error;
+                    response.send(update_results);
+                    return;
+                });
+            });
+        });
+    } else { response.sendStatus(400); }
 });
 
 //Hide a post
