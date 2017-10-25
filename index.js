@@ -173,14 +173,12 @@ app.get('/post/search', function(request, response) {
     if (keyword) {
         query += (!category ? ' WHERE ' : '') + 'title LIKE \'%' + keyword + '%\'';
     }
-    if (top != null) {
-        if (top) {
-            //Sort by decreasing upvote score
-            query += ' ORDER BY (up_votes - down_votes) DESC';
-        } else {
-            //Sort by increasing upvote score
-            query += ' ORDER BY (up_votes - down_votes) ASC';
-        }
+    if (top > 0) {
+        //Sort by decreasing upvote score
+        query += ' ORDER BY (up_votes - down_votes) DESC';
+    } else if (top != null) {
+        //Sort by increasing upvote score
+        query += ' ORDER BY (up_votes - down_votes) ASC';
     }
     console.log(query);
     connection.query(query, function (error, results, fields) {
@@ -189,14 +187,12 @@ app.get('/post/search', function(request, response) {
             var keyword_query = 'SELECT * FROM posts WHERE '
             + (category ? 'category=\'' + category + '\' AND ' : '')
             + 'post_id in (SELECT post_id FROM post_keywords WHERE keyword LIKE \'%' + keyword + '%\')';
-            if (top != null) {
-                if (top) {
-                    //Sort by decreasing upvote score
-                    keyword_query += ' ORDER BY (up_votes - down_votes) DESC';
-                } else {
-                    //Sort by increasing upvote score
-                    keyword_query += ' ORDER BY (up_votes - down_votes) ASC';
-                }
+            if (top > 0) {
+                //Sort by decreasing upvote score
+                keyword_query += ' ORDER BY (up_votes - down_votes) DESC';
+            } else if (top != null) {
+                //Sort by increasing upvote score
+                keyword_query += ' ORDER BY (up_votes - down_votes) ASC';
             }
             console.log(keyword_query);
             connection.query(keyword_query, function (error, keyword_results, fields) {
@@ -309,7 +305,6 @@ app.post('/post/:pid/close', function(request, response) {
 
 //Reply to a post
 app.post('/post/:pid/reply', function(request, response) {
-    //SPRINT 1 - Traver
     var postId = request.params.pid;
     var json = request.body;
     if (postId && json.user_id && json.text_content) {
@@ -363,7 +358,6 @@ app.post('/post/:pid/vote', function(request, response) {
                         post_update_query = 'UPDATE posts SET down_votes = down_votes + 1 WHERE post_id=\'' + postId + '\'';
                     }
                 }
-                console.log(post_update_query);
                 connection.query(post_update_query, function(error, update_results, fields) {
                     if (error) throw error;
                     response.send(update_results);
@@ -424,10 +418,16 @@ app.post('/post/:pid/report', function(request, response) {
 app.get('/post/:pid/reply/all', function(request, response) {
     var postid = request.params.pid;
     var userid = request.query.user_id;
+    var top = request.query.top;
     if (postid && userid) {
         var sql = "SELECT reply_id, post_id, replies.user_id, text_content, image, is_best_answer, username FROM replies " +
         "INNER JOIN users ON replies.user_id=users.user_id WHERE CASE WHEN ((SELECT user_id FROM posts WHERE post_id =" + postid +
          ") =" + userid + ") THEN post_id =" + postid + " AND is_hidden = 0 ELSE post_id = "+ postid +" END";
+        if (top > 0) {
+            sql += " ORDER BY (replies.up_votes - replies.down_votes) DESC";
+        } else if (top != null) {
+            sql += " ORDER BY (replies.up_votes - replies.down_votes) ASC";
+        }
         connection.query(sql, function (error, results, fields) {
             if (error) throw error;
             var i = 0;
@@ -499,7 +499,6 @@ app.post('/post/:pid/reply/:rid/vote', function(request, response) {
                         reply_update_query = 'UPDATE replies SET down_votes = down_votes + 1 WHERE reply_id=\'' + replyId + '\'';
                     }
                 }
-                console.log(reply_update_query);
                 connection.query(reply_update_query, function(error, update_results, fields) {
                     if (error) throw error;
                     response.send(update_results);
