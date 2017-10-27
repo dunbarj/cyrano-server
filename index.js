@@ -4,6 +4,7 @@ var express = require('express'),
     config = require('./config.js'),
     mysql = require('mysql')
     crypto = require('crypto'),
+    keyword_extractor = require("keyword-extractor"),
     algorithm = 'aes-256-ctr',
     password = 'JWsmDm5gdkhW4Phm';
 
@@ -138,21 +139,34 @@ app.post('/post/create', function(request, response) {
     var user_id = request.body.user_id,
         title = request.body.title,
         text_content = request.body.text_content,
-        image = request.body.image,
-        category = request.body.category,
+        image = request.body.image1,
+        image2 = request.body.image2,
+        image3 = request.body.image3,
+     7   category = request.body.category,
         bounty = request.body.bounty;
-    if (!image) {
-        image = "";
-    }
     var date = new Date();
     var datestr = date.getUTCFullYear() + "-" + (date.getUTCMonth()+1) + "-" + date.getUTCDate() + " " +
     date.getUTCHours()+ ":" + date.getUTCMinutes() + ":" + date.getUTCSeconds();
     console.log(datestr);
-    connection.query('INSERT INTO posts (user_id, time_created, title, text_content, image, category, bounty) VALUES (\'' +
+    connection.query('INSERT INTO posts (user_id, time_created, title, text_content, image, image2, image3, category, bounty) VALUES (\'' +
     user_id + '\', TIMESTAMP(\'' + datestr + '\'), \'' + escape(title) + '\', \'' + escape(text_content) + '\', \'' + image +
-    '\', \'' + category + '\', \'' + bounty + '\')', function (error, results, fields) {
+    '\', \'' + image2 + '\', \'' + image3 + '\', \'' + category + '\', \'' + bounty + '\')', function (error, results, fields) {
         if (error) response.send(error);
-        response.send(results);
+        var extraction_result = keyword_extractor.extract((text_content),{ language:"english", remove_digits: true,
+        return_changed_case:true, remove_duplicates: true});
+        console.log(extraction_result);
+        var i;
+        var sql = "INSERT INTO post_keywords (post_id, keyword) VALUES "
+        for (i = 0; i < extraction_result.length; i++) {
+            sql += "(" + results.insertId + ", \'" + escape(extraction_result[i]) + "\')";
+            if (i != extraction_result.length-1) {
+                sql += ", ";
+            }
+        }
+        connection.query(sql, function (error1, results1, fields1) {
+            if (error1) throw error1;
+            response.send(results);
+        });
     });
 });
 
@@ -245,7 +259,25 @@ app.post('/post/:pid', function(request, response) {
         var sql = "UPDATE posts SET text_content = \'" + escape(json.text_content) +"\' WHERE post_id=\'" + postId + "\'";
         connection.query(sql, function (error, results, fields) {
             if (error) throw error;
-            response.send(results);
+            var sql2 = "DELETE FROM post_keywords WHERE post_id=\'" + postId + "\'";
+            connection.query(sql2, function (error1, results1, fields1) {
+            });
+            var extraction_result = keyword_extractor.extract((json.text_content),{ language:"english", remove_digits: true,
+            return_changed_case:true, remove_duplicates: true});
+            console.log(extraction_result);
+            var i;
+            var sql1 = "INSERT INTO post_keywords (post_id, keyword) VALUES "
+            for (i = 0; i < extraction_result.length; i++) {
+                sql1 += "(" + postId + ", \'" + escape(extraction_result[i]) + "\')";
+                if (i != extraction_result.length-1) {
+                    sql1 += ", ";
+                }
+            }
+            connection.query(sql1, function (error1, results1, fields1) {
+                if (error1) throw error1;
+                response.send(results);
+            });
+
         });
     } else { response.sendStatus(400); }
 });
@@ -287,7 +319,8 @@ app.post('/post/:pid/reply', function(request, response) {
     var postId = request.params.pid;
     var json = request.body;
     if (postId && json.user_id && json.text_content) {
-        var sql = "INSERT INTO replies (post_id, user_id, text_content) values (\'" + postId + "\', \'" + json.user_id +
+        var sql = "INSERT INTO replies (post_id, user_id, image, image2, image3, text_content) values (\'"
+        + postId + "\', \'" + json.user_id +"\', \'" + json.image1 +"\', \'" + json.image2 +"\', \'" + json.image3 +
         "\', \'" + escape(json.text_content) + "\')";
         connection.query(sql, function (error, results, fields) {
             if (error) throw error;
@@ -353,9 +386,9 @@ app.get('/post/:pid/reply/all', function(request, response) {
     var postid = request.params.pid;
     var userid = request.query.user_id;
     if (postid && userid) {
-        var sql = "SELECT reply_id, post_id, replies.user_id, text_content, image, is_best_answer, username FROM replies " +
-        "INNER JOIN users ON replies.user_id=users.user_id WHERE CASE WHEN ((SELECT user_id FROM posts WHERE post_id =" + postid +
-         ") =" + userid + ") THEN post_id =" + postid + " AND is_hidden = 0 ELSE post_id = "+ postid +" END";
+        var sql = "SELECT reply_id, post_id, replies.user_id, text_content, image, image2, image3, is_best_answer, up_votes, down_votes," +
+        " username FROM replies INNER JOIN users ON replies.user_id=users.user_id WHERE CASE WHEN ((SELECT user_id FROM" +
+        " posts WHERE post_id =" + postid + ") =" + userid + ") THEN post_id =" + postid + " AND is_hidden = 0 ELSE post_id = "+ postid +" END";
         connection.query(sql, function (error, results, fields) {
             if (error) throw error;
             var i = 0;
