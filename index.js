@@ -16,6 +16,10 @@ var connection = mysql.createConnection({
   database : config.database
 });
 
+var post_report_threshold = 3;
+var reply_report_threshold = 3;
+
+
 //===== Express =====//
 var app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -174,6 +178,7 @@ app.post('/post/create', function(request, response) {
 app.get('/post/search', function(request, response) {
     var category = request.query.category;
     var keyword = request.query.keyword;
+    var top = request.query.top;
     
     var query = 'SELECT * FROM posts';
     if (category) {
@@ -182,30 +187,47 @@ app.get('/post/search', function(request, response) {
     if (keyword) {
         query += (!category ? ' WHERE ' : '') + 'title LIKE \'%' + keyword + '%\'';
     }
+    if (top > 0) {
+        //Sort by decreasing upvote score
+        query += ' ORDER BY (up_votes - down_votes) DESC';
+    } else if (top != null) {
+        //Sort by increasing upvote score
+        query += ' ORDER BY (up_votes - down_votes) ASC';
+    }
     console.log(query);
     connection.query(query, function (error, results, fields) {
         if (error) response.send(error);
-        var keyword_query = 'SELECT * FROM posts WHERE '
-        + (category ? 'category=\'' + category + '\' AND ' : '')
-        + 'post_id in (SELECT post_id FROM post_keywords WHERE keyword LIKE \'%' + keyword + '%\')';
-        console.log(keyword_query);
-        connection.query(keyword_query, function (error, keyword_results, fields) {
-            if (error) response.send(error);
-            var final_results = results.concat(keyword_results);
-            var i = 0;
-            for (i = 0; i < final_results.length; i++) {
-                final_results[i].title = unescape(final_results[i].title);
-                final_results[i].text_content = unescape(final_results[i].text_content);
+        if (keyword) {
+            var keyword_query = 'SELECT * FROM posts WHERE '
+            + (category ? 'category=\'' + category + '\' AND ' : '')
+            + 'post_id in (SELECT post_id FROM post_keywords WHERE keyword LIKE \'%' + keyword + '%\')';
+            if (top > 0) {
+                //Sort by decreasing upvote score
+                keyword_query += ' ORDER BY (up_votes - down_votes) DESC';
+            } else if (top != null) {
+                //Sort by increasing upvote score
+                keyword_query += ' ORDER BY (up_votes - down_votes) ASC';
             }
-            response.send(final_results);
-        });
+            console.log(keyword_query);
+            connection.query(keyword_query, function (error, keyword_results, fields) {
+                if (error) response.send(error);
+                var final_results = results.concat(keyword_results);
+                var i = 0;
+                for (i = 0; i < final_results.length; i++) {
+                    final_results[i].title = unescape(final_results[i].title);
+                    final_results[i].text_content = unescape(final_results[i].text_content);
+                }
+                response.send(final_results);
+            });
+        } else {
+            response.send(results);
+            return;
+        }
     });
 });
 
 //Get the feed
 app.get('/post/feed', function(request, response) {
-    console.log("Works")
-    //SPRINT 1 - Traver
     var json = request.query;
     if(json.type === 'new') {
         var sql = "SELECT * FROM posts ORDER BY time_created DESC LIMIT 50";
@@ -219,7 +241,7 @@ app.get('/post/feed', function(request, response) {
             response.send(results);
         });
     } else if (json.type === 'top') {
-        var sql = "SELECT * FROM posts ORDER BY (up_votes-down_Votes)*10 + views DESC LIMIT 50";
+        var sql = "SELECT * FROM posts ORDER BY (up_votes-down_votes)*10 + views DESC LIMIT 50";
         connection.query(sql, function (error, results, fields) {
             if (error) throw error;
             for (i = 0; i < results.length; i++) {
@@ -315,7 +337,6 @@ app.post('/post/:pid/close', function(request, response) {
 
 //Reply to a post
 app.post('/post/:pid/reply', function(request, response) {
-    //SPRINT 1 - Traver
     var postId = request.params.pid;
     var json = request.body;
     if (postId && json.user_id && json.text_content) {
@@ -370,11 +391,56 @@ app.post('/post/:pid/vote', function(request, response) {
                         post_update_query = 'UPDATE posts SET down_votes = down_votes + 1 WHERE post_id=\'' + postId + '\'';
                     }
                 }
-                console.log(post_update_query);
                 connection.query(post_update_query, function(error, update_results, fields) {
                     if (error) throw error;
                     response.send(update_results);
+                });
+            });
+        });
+    } else { response.sendStatus(400); }
+});
+
+//Report a post
+app.post('/post/:pid/report', function(request, response) {
+    var postId = request.params.pid;
+    var json = request.body;
+    if (postId && json.user_id) {
+        var check_query = "SELECT * FROM posts WHERE post_id=\'" + postId + "\'";
+        connection.query(check_query, function(error, check_results, fields) {
+            if (check_results.length <= 0) {
+                console.log("Post does not exist in database!");
+                response.sendStatus(400);
+                return;
+            }
+            var query = "SELECT * FROM reported_posts WHERE post_id=\'" + postId + "\' AND user_id=\'" + json.user_id + "\'";
+            connection.query(query, function (error, results, fields) {
+                if (error) throw error;
+                if (results.length > 0) {
+                    console.log("User has already reported this post!");
+                    response.sendStatus(400);
                     return;
+                }
+                var insert_query = "INSERT INTO reported_posts (post_id, user_id, report_code) VALUES (\'"
+                    + postId + "\', \'"
+                    + json.user_id + "\', \'"
+                    + json.report_code + "\')";
+                connection.query(insert_query, function(error, insert_results, fields) {
+                    if (error) throw error;
+                    //Check if post should be hidden for review by administration
+                    var check_num_query = "SELECT * FROM reported_posts WHERE post_id=\'" + postId + "\'";
+                    connection.query(check_num_query, function(error, check_num_results, fields) {
+                        if (check_num_results.length >= post_report_threshold) {
+                            //Hide the post for review
+                            var hide_query = "UPDATE posts SET hide_for_reporting = CASE\nWHEN hide_for_reporting = 2 THEN 2\nELSE 1\nEND WHERE post_id=\'" + postId + "\'";
+                            connection.query(hide_query, function(error, hide_results, fields) {
+                                if (error) throw error;
+                                response.send(hide_results);
+                                return;
+                            });
+                        } else {
+                            response.send(insert_results);
+                        }
+                    });
                 });
             });
         });
@@ -385,10 +451,16 @@ app.post('/post/:pid/vote', function(request, response) {
 app.get('/post/:pid/reply/all', function(request, response) {
     var postid = request.params.pid;
     var userid = request.query.user_id;
+    var top = request.query.top;
     if (postid && userid) {
         var sql = "SELECT reply_id, post_id, replies.user_id, text_content, image, image2, image3, is_best_answer, up_votes, down_votes," +
         " username FROM replies INNER JOIN users ON replies.user_id=users.user_id WHERE CASE WHEN ((SELECT user_id FROM" +
         " posts WHERE post_id =" + postid + ") =" + userid + ") THEN post_id =" + postid + " AND is_hidden = 0 ELSE post_id = "+ postid +" END";
+        if (top > 0) {
+            sql += " ORDER BY (replies.up_votes - replies.down_votes) DESC";
+        } else if (top != null) {
+            sql += " ORDER BY (replies.up_votes - replies.down_votes) ASC";
+        }
         connection.query(sql, function (error, results, fields) {
             if (error) throw error;
             var i = 0;
@@ -460,18 +532,16 @@ app.post('/post/:pid/reply/:rid/vote', function(request, response) {
                         reply_update_query = 'UPDATE replies SET down_votes = down_votes + 1 WHERE reply_id=\'' + replyId + '\'';
                     }
                 }
-                console.log(reply_update_query);
                 connection.query(reply_update_query, function(error, update_results, fields) {
                     if (error) throw error;
                     response.send(update_results);
-                    return;
                 });
             });
         });
     } else { response.sendStatus(400); }
 });
 
-//Hide a post
+//Hide a reply to a post
 app.post('/post/:pid/reply/:rid/hide', function(request, response) {
     var postId = request.params.pid;
     var replyId = request.params.rid;
@@ -484,9 +554,53 @@ app.post('/post/:pid/reply/:rid/hide', function(request, response) {
     } else { response.sendStatus(400); }
 });
 
-//Report a post
+//Report a reply to a post
 app.post('/post/:pid/reply/:rid/report', function(request, response) {
-    
+    var postId = request.params.pid;
+    var replyId = request.params.rid;
+    var json = request.body;
+    if (postId && replyId && json.user_id) {
+        var check_query = "SELECT * FROM replies WHERE reply_id=\'" + replyId + "\'";
+        connection.query(check_query, function(error, check_results, fields) {
+            if (check_results.length <= 0) {
+                console.log("Reply does not exist in database!");
+                response.sendStatus(400);
+                return;
+            }
+            var query = "SELECT * FROM reported_replies WHERE reply_id=\'" + replyId + "\' AND user_id=\'" + json.user_id + "\'";
+            connection.query(query, function (error, results, fields) {
+                if (error) throw error;
+                if (results.length > 0) {
+                    console.log("User has already reported this reply!");
+                    response.sendStatus(400);
+                    return;
+                }
+                var insert_query = "INSERT INTO reported_replies (reply_id, user_id, report_code) VALUES (\'"
+                    + replyId + "\', \'"
+                    + json.user_id + "\', \'"
+                    + json.report_code + "\')";
+                connection.query(insert_query, function(error, insert_results, fields) {
+                    if (error) throw error;
+                    
+                    //Check if reply should be hidden for review by administration
+                    var check_num_query = "SELECT * FROM reported_replies WHERE reply_id=\'" + replyId + "\'";
+                    connection.query(check_num_query, function(error, check_num_results, fields) {
+                        if (check_num_results.length >= reply_report_threshold) {
+                            //Hide the reply for review
+                            var hide_query = "UPDATE replies SET hide_for_reporting = CASE WHEN hide_for_reporting = 2 THEN 2 ELSE 1 END WHERE reply_id=\'" + replyId + "\'";
+                            connection.query(hide_query, function(error, hide_results, fields) {
+                                if (error) throw error;
+                                response.send(hide_results);
+                                return;
+                            });
+                        } else {
+                            response.send(insert_results);
+                        }
+                    });
+                });
+            });
+        });
+    } else { response.sendStatus(400); }
 });
 
 //Admin delete a post
