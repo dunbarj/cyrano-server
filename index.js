@@ -447,7 +447,7 @@ app.post('/post/:pid/report', function(request, response) {
     } else { response.sendStatus(400); }
 });
 
-//Get all post replies
+//Get all post replies - Requires user_id
 app.get('/post/:pid/reply/all', function(request, response) {
     var postid = request.params.pid;
     var userid = request.query.user_id;
@@ -474,7 +474,15 @@ app.get('/post/:pid/reply/all', function(request, response) {
 
 //Get a specific reply to a post
 app.get('/post/:pid/reply/:rid', function(request, response) {
-    
+    var postId = request.params.pid;
+    var replyId = request.params.rid;
+    if (replyId) {
+        var sql = "SELECT * FROM replies WHERE reply_id=\'" + replyId + "\'";
+        connection.query(sql, function(error, results, fields) {
+            if (error) throw error;
+            response.send(results);
+        });
+    } else { response.sendStatus(400); }
 });
 
 //Delete a reply
