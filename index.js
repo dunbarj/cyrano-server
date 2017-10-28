@@ -146,7 +146,7 @@ app.post('/post/create', function(request, response) {
         image = request.body.image1,
         image2 = request.body.image2,
         image3 = request.body.image3,
-     7   category = request.body.category,
+        category = request.body.category,
         bounty = request.body.bounty;
     var date = new Date();
     var datestr = date.getUTCFullYear() + "-" + (date.getUTCMonth()+1) + "-" + date.getUTCDate() + " " +
