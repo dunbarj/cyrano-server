@@ -502,7 +502,7 @@ app.get('/post/:pid/reply/all', function(request, response) {
             }
             response.send(results);
         });
-    } else { response.sendStatus(400); }
+    }
 });
 
 //Get a specific reply to a post
