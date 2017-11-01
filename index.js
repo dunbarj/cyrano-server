@@ -139,7 +139,6 @@ app.get('/user/:uid/posts', function(request, response) {
 
 //Create a post
 app.post('/post/create', function(request, response) {
-    console.log(request);
     var user_id = request.body.user_id,
         title = request.body.title,
         text_content = request.body.text_content,
