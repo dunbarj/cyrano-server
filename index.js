@@ -476,7 +476,16 @@ app.get('/post/:pid/reply/all', function(request, response) {
     var postid = request.params.pid;
     var userid = request.query.user_id;
     var top = request.query.top;
-    if (postid && userid) {
+    if (!postid) {
+        response.sendStatus(400);
+        return;
+    }
+    checkUser (userid, function(check_result) {
+        if (check_result == 0) {
+            console.log("User with user_id " + userid + " does not exist!");
+            response.sendStatus(400);
+            return;
+        }
         var sql = "SELECT reply_id, post_id, replies.user_id, text_content, image, image2, image3, is_best_answer, up_votes, down_votes," +
         " username FROM replies INNER JOIN users ON replies.user_id=users.user_id WHERE CASE WHEN ((SELECT user_id FROM" +
         " posts WHERE post_id =" + postid + ") =" + userid + ") THEN post_id =" + postid + " AND is_hidden = 0 ELSE post_id = "+ postid +" END";
