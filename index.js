@@ -238,7 +238,7 @@ app.get('/post/feed', function(request, response) {
                 results[i].title = unescape(results[i].title);
                 results[i].text_content = unescape(results[i].text_content);
             }
-            response.send(results);
+            response.send(reportFilter(results));
         });
     } else if (json.type === 'top') {
         var sql = "SELECT * FROM posts ORDER BY (up_votes-down_votes)*10 + views DESC LIMIT 50";
@@ -248,7 +248,7 @@ app.get('/post/feed', function(request, response) {
                 results[i].title = unescape(results[i].title);
                 results[i].text_content = unescape(results[i].text_content);
             }
-            response.send(results);
+            response.send(reportFilter(results));
         });
     } else { response.sendStatus(400); }
 
@@ -425,7 +425,7 @@ app.post('/post/:pid/report', function(request, response) {
         return;
     }
     checkUser (json.user_id, function(check_result) {
-        if (checkResult == 0) {
+        if (check_result == 0) {
             console.log("User with user_id " + json.user_id + " does not exist!");
             response.sendStatus(400);
             return;
@@ -815,6 +815,14 @@ function checkUser(user_id, callback) {
             callback(0);
         }
     });
+}
+
+//Remove reported posts from sql results
+function reportFilter(input) {
+    var filtered = input.filter(function(item) {
+        return item.hide_for_reporting !== 1; 
+    });
+    return filtered;
 }
 
 //===== PORT =====//
