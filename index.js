@@ -139,7 +139,6 @@ app.get('/user/:uid/posts', function(request, response) {
 
 //Create a post
 app.post('/post/create', function(request, response) {
-    console.log(request);
     var user_id = request.body.user_id,
         title = request.body.title,
         text_content = request.body.text_content,
@@ -151,7 +150,7 @@ app.post('/post/create', function(request, response) {
     var date = new Date();
     var datestr = date.getUTCFullYear() + "-" + (date.getUTCMonth()+1) + "-" + date.getUTCDate() + " " +
     date.getUTCHours()+ ":" + date.getUTCMinutes() + ":" + date.getUTCSeconds();
-    console.log(datestr);
+    console.log("Image:" + image);
     connection.query('INSERT INTO posts (user_id, time_created, title, text_content, image, image2, image3, category, bounty) VALUES (\'' +
     user_id + '\', TIMESTAMP(\'' + datestr + '\'), \'' + escape(title) + '\', \'' + escape(text_content) + '\', \'' + image +
     '\', \'' + image2 + '\', \'' + image3 + '\', \'' + category + '\', \'' + bounty + '\')', function (error, results, fields) {
