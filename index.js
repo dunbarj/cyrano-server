@@ -133,7 +133,7 @@ app.get('/user/:uid/posts', function(request, response) {
             results[i].title = unescape(results[i].title);
             results[i].text_content = unescape(results[i].text_content);
         }
-        response.send(results);
+        response.send(reportFilter(results));
     });
 });
 
@@ -216,10 +216,10 @@ app.get('/post/search', function(request, response) {
                     final_results[i].title = unescape(final_results[i].title);
                     final_results[i].text_content = unescape(final_results[i].text_content);
                 }
-                response.send(final_results);
+                response.send(reportFilter(final_results));
             });
         } else {
-            response.send(results);
+            response.send(reportFilter(results));
             return;
         }
     });
@@ -260,7 +260,7 @@ app.get('/post/:pid', function(request, response) {
         var sql = "SELECT * FROM posts WHERE post_id=\'" + postId + "\'";
         connection.query(sql, function (error, results, fields) {
             if (error) throw error;
-            var post = results[0];
+            var post = reportFilter(results)[0];
             if (post !== undefined) {
                 post.title = unescape(post.title);
                 post.text_content = unescape(post.text_content);
