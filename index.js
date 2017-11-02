@@ -160,18 +160,20 @@ app.post('/post/create', function(request, response) {
         var extraction_result = keyword_extractor.extract((text_content),{ language:"english", remove_digits: true,
         return_changed_case:true, remove_duplicates: true});
         console.log(extraction_result);
-        var i;
-        var sql = "INSERT INTO post_keywords (post_id, keyword) VALUES "
-        for (i = 0; i < extraction_result.length; i++) {
-            sql += "(" + results.insertId + ", \'" + escape(extraction_result[i]) + "\')";
-            if (i != extraction_result.length-1) {
-                sql += ", ";
+        if (extraction_result.length > 0) {
+            var i;
+            var sql = "INSERT INTO post_keywords (post_id, keyword) VALUES "
+            for (i = 0; i < extraction_result.length; i++) {
+                sql += "(" + results.insertId + ", \'" + escape(extraction_result[i]) + "\')";
+                if (i != extraction_result.length-1) {
+                    sql += ", ";
+                }
             }
-        }
-        connection.query(sql, function (error1, results1, fields1) {
-            if (error1) throw error1;
-            response.send(results);
-        });
+            connection.query(sql, function (error1, results1, fields1) {
+                if (error1) throw error1;
+                response.send(results);
+            });
+        } else { response.send(results); }
     });
 });
 
@@ -224,6 +226,14 @@ app.get('/post/search', function(request, response) {
                 response.send(reportFilter(final_results));
             });
         } else {
+            var i = 0;
+            for (i = 0; i < results.length; i++) {
+                results[i].title = unescape(results[i].title);
+                results[i].text_content = unescape(results[i].text_content);
+                results[i].image = unescape(results[i].image);
+                results[i].image2 = unescape(results[i].image2);
+                results[i].image3 = unescape(results[i].image3);
+            }
             response.send(reportFilter(results));
             return;
         }
@@ -299,18 +309,20 @@ app.post('/post/:pid', function(request, response) {
             var extraction_result = keyword_extractor.extract((json.text_content),{ language:"english", remove_digits: true,
             return_changed_case:true, remove_duplicates: true});
             console.log(extraction_result);
-            var i;
-            var sql1 = "INSERT INTO post_keywords (post_id, keyword) VALUES "
-            for (i = 0; i < extraction_result.length; i++) {
-                sql1 += "(" + postId + ", \'" + escape(extraction_result[i]) + "\')";
-                if (i != extraction_result.length-1) {
-                    sql1 += ", ";
+            if (extraction_result.length > 0) {
+                var i;
+                var sql1 = "INSERT INTO post_keywords (post_id, keyword) VALUES "
+                for (i = 0; i < extraction_result.length; i++) {
+                    sql1 += "(" + postId + ", \'" + escape(extraction_result[i]) + "\')";
+                    if (i != extraction_result.length-1) {
+                        sql1 += ", ";
+                    }
                 }
-            }
-            connection.query(sql1, function (error1, results1, fields1) {
-                if (error1) throw error1;
-                response.send(results);
-            });
+                connection.query(sql1, function (error1, results1, fields1) {
+                    if (error1) throw error1;
+                    response.send(results);
+                });
+            } else { response.send(results); }
 
         });
     } else { response.sendStatus(400); }
