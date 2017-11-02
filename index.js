@@ -148,6 +148,9 @@ app.post('/post/create', function(request, response) {
         category = request.body.category,
         bounty = request.body.bounty;
     var date = new Date();
+    if (!image) image = null;
+    if (!image2) image2 = null;
+    if (!image3) image3 = null;
     var datestr = date.getUTCFullYear() + "-" + (date.getUTCMonth()+1) + "-" + date.getUTCDate() + " " +
     date.getUTCHours()+ ":" + date.getUTCMinutes() + ":" + date.getUTCSeconds();
     connection.query('INSERT INTO posts (user_id, time_created, title, text_content, image, image2, image3, category, bounty) VALUES (\'' +
@@ -347,6 +350,12 @@ app.post('/post/:pid/close', function(request, response) {
 app.post('/post/:pid/reply', function(request, response) {
     var postId = request.params.pid;
     var json = request.body;
+    var image = request.body.image1,
+        image2 = request.body.image2,
+        image3 = request.body.image3,
+    if (!image) image = null;
+    if (!image2) image2 = null;
+    if (!image3) image3 = null;
     if (!postId || !json.text_content) {
         response.sendStatus(400);
         return;
@@ -358,7 +367,7 @@ app.post('/post/:pid/reply', function(request, response) {
             return;
         }
         var sql = "INSERT INTO replies (post_id, user_id, image, image2, image3, text_content) values (\'"
-        + postId + "\', \'" + json.user_id +"\', \'" + json.image1 +"\', \'" + json.image2 +"\', \'" + json.image3 +
+        + postId + "\', \'" + json.user_id +"\', \'" + escape(image) +"\', \'" + escape(image2) +"\', \'" + escape(image3) +
         "\', \'" + escape(json.text_content) + "\')";
         connection.query(sql, function (error, results, fields) {
             if (error) throw error;
@@ -510,6 +519,9 @@ app.get('/post/:pid/reply/all', function(request, response) {
             var i = 0;
             for (i = 0; i < results.length; i++) {
                 results[i].text_content = unescape(results[i].text_content);
+                results[i].image = unescape(results[i].image);
+                results[i].image2 = unescape(results[i].image2);
+                results[i].image3 = unescape(results[i].image3);
             }
             response.send(results);
         });
@@ -524,6 +536,10 @@ app.get('/post/:pid/reply/:rid', function(request, response) {
         var sql = "SELECT * FROM replies WHERE reply_id=\'" + replyId + "\'";
         connection.query(sql, function(error, results, fields) {
             if (error) throw error;
+            results.text_content = unescape(results.text_content);
+            results.image = unescape(results.image);
+            results.image2 = unescape(results.image2);
+            results.image3 = unescape(results.image3);
             response.send(results);
         });
     } else { response.sendStatus(400); }
