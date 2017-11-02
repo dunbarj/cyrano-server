@@ -148,9 +148,9 @@ app.post('/post/create', function(request, response) {
         category = request.body.category,
         bounty = request.body.bounty;
     var date = new Date();
-    if (!image) image = null;
-    if (!image2) image2 = null;
-    if (!image3) image3 = null;
+    if (!image) {image = null;}
+    if (!image2) {image2 = null;}
+    if (!image3) {image3 = null;}
     var datestr = date.getUTCFullYear() + "-" + (date.getUTCMonth()+1) + "-" + date.getUTCDate() + " " +
     date.getUTCHours()+ ":" + date.getUTCMinutes() + ":" + date.getUTCSeconds();
     connection.query('INSERT INTO posts (user_id, time_created, title, text_content, image, image2, image3, category, bounty) VALUES (\'' +
@@ -352,10 +352,10 @@ app.post('/post/:pid/reply', function(request, response) {
     var json = request.body;
     var image = request.body.image1,
         image2 = request.body.image2,
-        image3 = request.body.image3,
-    if (!image) image = null;
-    if (!image2) image2 = null;
-    if (!image3) image3 = null;
+        image3 = request.body.image3;
+    if (!image) {image = null;}
+    if (!image2) {image2 = null;}
+    if (!image3) {image3 = null;}
     if (!postId || !json.text_content) {
         response.sendStatus(400);
         return;
