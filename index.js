@@ -150,10 +150,9 @@ app.post('/post/create', function(request, response) {
     var date = new Date();
     var datestr = date.getUTCFullYear() + "-" + (date.getUTCMonth()+1) + "-" + date.getUTCDate() + " " +
     date.getUTCHours()+ ":" + date.getUTCMinutes() + ":" + date.getUTCSeconds();
-    console.log("Image: " + image);
     connection.query('INSERT INTO posts (user_id, time_created, title, text_content, image, image2, image3, category, bounty) VALUES (\'' +
-    user_id + '\', TIMESTAMP(\'' + datestr + '\'), \'' + escape(title) + '\', \'' + escape(text_content) + '\', \'' + image +
-    '\', \'' + image2 + '\', \'' + image3 + '\', \'' + category + '\', \'' + bounty + '\')', function (error, results, fields) {
+    user_id + '\', TIMESTAMP(\'' + datestr + '\'), \'' + escape(title) + '\', \'' + escape(text_content) + '\', \'' + escape(image) +
+    '\', \'' + escape(image2) + '\', \'' + escape(image3) + '\', \'' + category + '\', \'' + bounty + '\')', function (error, results, fields) {
         if (error) response.send(error);
         var extraction_result = keyword_extractor.extract((text_content),{ language:"english", remove_digits: true,
         return_changed_case:true, remove_duplicates: true});
@@ -215,6 +214,9 @@ app.get('/post/search', function(request, response) {
                 for (i = 0; i < final_results.length; i++) {
                     final_results[i].title = unescape(final_results[i].title);
                     final_results[i].text_content = unescape(final_results[i].text_content);
+                    final_results[i].image = unescape(final_results[i].image);
+                    final_results[i].image2 = unescape(final_results[i].image2);
+                    final_results[i].image3 = unescape(final_results[i].image3);
                 }
                 response.send(reportFilter(final_results));
             });
@@ -236,6 +238,9 @@ app.get('/post/feed', function(request, response) {
             for (i = 0; i < results.length; i++) {
                 results[i].title = unescape(results[i].title);
                 results[i].text_content = unescape(results[i].text_content);
+                results[i].image = unescape(results[i].image);
+                results[i].image2 = unescape(results[i].image2);
+                results[i].image3 = unescape(results[i].image3);
             }
             response.send(reportFilter(results));
         });
@@ -246,6 +251,9 @@ app.get('/post/feed', function(request, response) {
             for (i = 0; i < results.length; i++) {
                 results[i].title = unescape(results[i].title);
                 results[i].text_content = unescape(results[i].text_content);
+                results[i].image = unescape(results[i].image);
+                results[i].image2 = unescape(results[i].image2);
+                results[i].image3 = unescape(results[i].image3);
             }
             response.send(reportFilter(results));
         });
@@ -264,6 +272,9 @@ app.get('/post/:pid', function(request, response) {
             if (post !== undefined) {
                 post.title = unescape(post.title);
                 post.text_content = unescape(post.text_content);
+                post.image = unescape(post.image);
+                post.image2 = unescape(post.image2);
+                post.image3 = unescape(post.image3);
                 response.send(post);
             } else { response.send("Post does not exist");}
         });
