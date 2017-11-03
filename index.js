@@ -214,7 +214,16 @@ app.get('/post/search', function(request, response) {
             console.log(keyword_query);
             connection.query(keyword_query, function (error, keyword_results, fields) {
                 if (error) response.send(error);
-                var final_results = results.concat(keyword_results);
+                //Removes duplicate results
+                var filtered = keyword_results.filter(function(item) {
+                    for (var check_item in results) {
+                        if (results[check_item].post_id == item.post_id) {
+                            return false;
+                        }
+                    }
+                    return true;
+                });
+                var final_results = results.concat(filtered);
                 var i = 0;
                 for (i = 0; i < final_results.length; i++) {
                     final_results[i].title = unescape(final_results[i].title);
