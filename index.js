@@ -159,7 +159,7 @@ app.post('/post/create', function(request, response) {
         if (error) response.send(error);
         var extraction_result = keyword_extractor.extract((text_content),{ language:"english", remove_digits: true,
         return_changed_case:true, remove_duplicates: true});
-        console.log(extraction_result);
+        //console.log(extraction_result);
         if (extraction_result.length > 0) {
             var i;
             var sql = "INSERT INTO post_keywords (post_id, keyword) VALUES "
@@ -197,7 +197,6 @@ app.get('/post/search', function(request, response) {
         //Sort by increasing upvote score
         query += ' ORDER BY (up_votes - down_votes) ASC';
     }
-    console.log(query);
     connection.query(query, function (error, results, fields) {
         if (error) response.send(error);
         if (keyword) {
@@ -211,7 +210,6 @@ app.get('/post/search', function(request, response) {
                 //Sort by increasing upvote score
                 keyword_query += ' ORDER BY (up_votes - down_votes) ASC';
             }
-            console.log(keyword_query);
             connection.query(keyword_query, function (error, keyword_results, fields) {
                 if (error) response.send(error);
                 //Removes duplicate results
@@ -297,7 +295,7 @@ app.get('/post/:pid', function(request, response) {
                 post.image = unescape(post.image);
                 post.image2 = unescape(post.image2);
                 post.image3 = unescape(post.image3);
-                console.log(post.image);
+                //console.log(post.image);
                 response.send(post);
             } else { response.send("Post does not exist"); }
         });
@@ -318,7 +316,7 @@ app.post('/post/:pid', function(request, response) {
             });
             var extraction_result = keyword_extractor.extract((json.text_content),{ language:"english", remove_digits: true,
             return_changed_case:true, remove_duplicates: true});
-            console.log(extraction_result);
+            //console.log(extraction_result);
             if (extraction_result.length > 0) {
                 var i;
                 var sql1 = "INSERT INTO post_keywords (post_id, keyword) VALUES "
@@ -421,7 +419,7 @@ app.post('/post/:pid/vote', function(request, response) {
                 //Entry already exists
                 console.log("Found existing post vote entry");
                 if (results[0].vote == json.vote) {
-                    response.sendStatus(400);
+                    response.send(null);
                     return;
                 }
                 vote_query = 'UPDATE user_votes_post SET vote=\'' + json.vote 
