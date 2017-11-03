@@ -661,7 +661,7 @@ app.post('/post/:pid/reply/:rid/report', function(request, response) {
         return;
     } 
     checkUser (json.user_id, function(check_result) {
-        if (checkResult == 0) {
+        if (check_result == 0) {
             console.log("User with user_id " + json.user_id + " does not exist!");
             response.sendStatus(400);
             return;
