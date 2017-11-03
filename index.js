@@ -275,8 +275,9 @@ app.get('/post/:pid', function(request, response) {
                 post.image = unescape(post.image);
                 post.image2 = unescape(post.image2);
                 post.image3 = unescape(post.image3);
+                console.log(post.image);
                 response.send(post);
-            } else { response.send("Post does not exist");}
+            } else { response.send("Post does not exist"); }
         });
     } else { response.sendStatus(400); }
 
