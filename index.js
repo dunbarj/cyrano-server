@@ -148,6 +148,9 @@ app.post('/post/create', function(request, response) {
         category = request.body.category,
         bounty = request.body.bounty;
     var date = new Date();
+    if (image === "") {image = "nope";}
+    if (image2 === "") {image2 = "nope";}
+    if (image3 === "") {image3 = "nope";}
     var datestr = date.getUTCFullYear() + "-" + (date.getUTCMonth()+1) + "-" + date.getUTCDate() + " " +
     date.getUTCHours()+ ":" + date.getUTCMinutes() + ":" + date.getUTCSeconds();
     connection.query('INSERT INTO posts (user_id, time_created, title, text_content, image, image2, image3, category, bounty) VALUES (\'' +
@@ -157,18 +160,20 @@ app.post('/post/create', function(request, response) {
         var extraction_result = keyword_extractor.extract((text_content),{ language:"english", remove_digits: true,
         return_changed_case:true, remove_duplicates: true});
         console.log(extraction_result);
-        var i;
-        var sql = "INSERT INTO post_keywords (post_id, keyword) VALUES "
-        for (i = 0; i < extraction_result.length; i++) {
-            sql += "(" + results.insertId + ", \'" + escape(extraction_result[i]) + "\')";
-            if (i != extraction_result.length-1) {
-                sql += ", ";
+        if (extraction_result.length > 0) {
+            var i;
+            var sql = "INSERT INTO post_keywords (post_id, keyword) VALUES "
+            for (i = 0; i < extraction_result.length; i++) {
+                sql += "(" + results.insertId + ", \'" + escape(extraction_result[i]) + "\')";
+                if (i != extraction_result.length-1) {
+                    sql += ", ";
+                }
             }
-        }
-        connection.query(sql, function (error1, results1, fields1) {
-            if (error1) throw error1;
-            response.send(results);
-        });
+            connection.query(sql, function (error1, results1, fields1) {
+                if (error1) throw error1;
+                response.send(results);
+            });
+        } else { response.send(results); }
     });
 });
 
@@ -221,6 +226,14 @@ app.get('/post/search', function(request, response) {
                 response.send(reportFilter(final_results));
             });
         } else {
+            var i = 0;
+            for (i = 0; i < results.length; i++) {
+                results[i].title = unescape(results[i].title);
+                results[i].text_content = unescape(results[i].text_content);
+                results[i].image = unescape(results[i].image);
+                results[i].image2 = unescape(results[i].image2);
+                results[i].image3 = unescape(results[i].image3);
+            }
             response.send(reportFilter(results));
             return;
         }
@@ -297,18 +310,20 @@ app.post('/post/:pid', function(request, response) {
             var extraction_result = keyword_extractor.extract((json.text_content),{ language:"english", remove_digits: true,
             return_changed_case:true, remove_duplicates: true});
             console.log(extraction_result);
-            var i;
-            var sql1 = "INSERT INTO post_keywords (post_id, keyword) VALUES "
-            for (i = 0; i < extraction_result.length; i++) {
-                sql1 += "(" + postId + ", \'" + escape(extraction_result[i]) + "\')";
-                if (i != extraction_result.length-1) {
-                    sql1 += ", ";
+            if (extraction_result.length > 0) {
+                var i;
+                var sql1 = "INSERT INTO post_keywords (post_id, keyword) VALUES "
+                for (i = 0; i < extraction_result.length; i++) {
+                    sql1 += "(" + postId + ", \'" + escape(extraction_result[i]) + "\')";
+                    if (i != extraction_result.length-1) {
+                        sql1 += ", ";
+                    }
                 }
-            }
-            connection.query(sql1, function (error1, results1, fields1) {
-                if (error1) throw error1;
-                response.send(results);
-            });
+                connection.query(sql1, function (error1, results1, fields1) {
+                    if (error1) throw error1;
+                    response.send(results);
+                });
+            } else { response.send(results); }
 
         });
     } else { response.sendStatus(400); }
@@ -348,6 +363,12 @@ app.post('/post/:pid/close', function(request, response) {
 app.post('/post/:pid/reply', function(request, response) {
     var postId = request.params.pid;
     var json = request.body;
+    var image = request.body.image1,
+        image2 = request.body.image2,
+        image3 = request.body.image3;
+    if (image === "") {image = "nope";}
+    if (image2 === "") {image2 = "nope";}
+    if (image3 === "") {image3 = "nope";}
     if (!postId || !json.text_content) {
         response.sendStatus(400);
         return;
@@ -359,7 +380,7 @@ app.post('/post/:pid/reply', function(request, response) {
             return;
         }
         var sql = "INSERT INTO replies (post_id, user_id, image, image2, image3, text_content) values (\'"
-        + postId + "\', \'" + json.user_id +"\', \'" + json.image1 +"\', \'" + json.image2 +"\', \'" + json.image3 +
+        + postId + "\', \'" + json.user_id +"\', \'" + escape(image) +"\', \'" + escape(image2) +"\', \'" + escape(image3) +
         "\', \'" + escape(json.text_content) + "\')";
         connection.query(sql, function (error, results, fields) {
             if (error) throw error;
@@ -511,6 +532,9 @@ app.get('/post/:pid/reply/all', function(request, response) {
             var i = 0;
             for (i = 0; i < results.length; i++) {
                 results[i].text_content = unescape(results[i].text_content);
+                results[i].image = unescape(results[i].image);
+                results[i].image2 = unescape(results[i].image2);
+                results[i].image3 = unescape(results[i].image3);
             }
             response.send(results);
         });
@@ -525,6 +549,10 @@ app.get('/post/:pid/reply/:rid', function(request, response) {
         var sql = "SELECT * FROM replies WHERE reply_id=\'" + replyId + "\'";
         connection.query(sql, function(error, results, fields) {
             if (error) throw error;
+            results.text_content = unescape(results.text_content);
+            results.image = unescape(results.image);
+            results.image2 = unescape(results.image2);
+            results.image3 = unescape(results.image3);
             response.send(results);
         });
     } else { response.sendStatus(400); }
