@@ -82,7 +82,6 @@ app.get('/user/', function(request, response) {
 
 //User Login
 app.get('/user/login', function(request, response) {
-    //SPRINT 1 - Traver
     var json = request.query;
     if (json.username && json.password) {
         var password = encrypt(json.password);
@@ -543,7 +542,7 @@ app.get('/post/:pid/reply/all', function(request, response) {
                 results[i].image2 = unescape(results[i].image2);
                 results[i].image3 = unescape(results[i].image3);
             }
-            response.send(results);
+            response.send(reportFilter(results));
         });
     });
 });
@@ -560,7 +559,7 @@ app.get('/post/:pid/reply/:rid', function(request, response) {
             results.image = unescape(results.image);
             results.image2 = unescape(results.image2);
             results.image3 = unescape(results.image3);
-            response.send(results);
+            response.send(reportFilter(results));
         });
     } else { response.sendStatus(400); }
 });
@@ -855,7 +854,7 @@ app.get('/user/:uid/messages', function(request, response) {
     
 });
 
-//Helper function that checks if the user with the given user_id is an admin
+//Helper function that checks if the user with the given user_id exists or is an admin
 function checkUser(user_id, callback) {
     var sql = "SELECT * FROM users WHERE user_id=\'" + user_id + "\'";
     connection.query(sql, function(error, results, fields) {
