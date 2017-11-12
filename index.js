@@ -63,7 +63,6 @@ app.post('/user/create', function(request, response) {
 
 //Get user info
 app.get('/user/', function(request, response) {
-    //SPRINT 1 - Traver
     console.log("Server Success");
     var json = request.query;
     if (json.cookie) {
@@ -449,6 +448,38 @@ app.post('/post/:pid/vote', function(request, response) {
                     if (error) throw error;
                     response.send(update_results);
                 });
+            });
+        });
+    });
+});
+
+//Follow a post
+app.post('/post/:pid/follow', function(request, response) {
+    var postId = request.params.pid;
+    var json = request.body;
+    if (!postId) {
+        response.sendStatus(400);
+        return;
+    }
+    checkUser (json.user_id, function(check_result) {
+        if (check_result == 0) {
+            console.log("User does not exist in database.");
+            response.sendStatus(400);
+            return;
+        }
+        checkPost (postId, function(post_check) {
+            if (post_check != 0) {
+                console.log("Post " + postId + " does not exist in database!")
+                response.sendStatus(400);
+                return;
+            }
+            //Both user_id and postId exist
+            var sql = "INSERT INTO user_is_following VALUES (user_id, post_id) VALUES (\'"
+                + json.user_id + "\', \'"
+                + postId + "\')";
+            connection.query(sql, function(error, result, fields) {
+                if (error) throw error;
+                response.send(result);
             });
         });
     });
@@ -871,12 +902,52 @@ function checkUser(user_id, callback) {
     });
 }
 
+//Helper function that checks if the post with the given post_id exists
+function checkPost(post_id, callback) {
+    var sql = "SELECT * FROM posts WHERE post_id=\'" + post_id + "\'";
+    connection.query(sql, function(error, results, fields) {
+        if (error) throw error;
+        if (results.length > 0) {
+            callback(0);
+            return;
+        }
+        callback(-1);
+        return;
+    });
+}
+
 //Remove reported posts from sql results
 function reportFilter(input) {
     var filtered = input.filter(function(item) {
         return item.hide_for_reporting !== 1; 
     });
     return filtered;
+}
+
+//Exchange "amt" currency from user 1 to user 2
+function exchangeCurrency(user1, user2, amt, callback) {
+    checkUser (user1, function(check_results) {
+        if (check_results == 0) {
+            console.log("User with user_id " + user1 + " does not exist!");
+            return callback(-1);
+        }
+        checkUser(user2, function(check_results2) {
+            if (check_results2 == 0) {
+                console.log("User with user_id " + user2 + " does not exist!");
+                return callback(-1);
+            }
+            //Both users are active
+            var sql = "UPDATE users SET currency = currency - " + amt + " WHERE user_id = \'" + user1 + "\'";
+            connection.query(sql, function(error, results, fields) {
+                if (error) throw error;
+                var sql = "UPDATE users SET currency = currency + " + amt + " WHERE user_id = \'" + user2 + "\'";
+                connection.query(sql, function(error, results, fields) {
+                    if (error) throw error;
+                    return callback(0);
+                });
+            });
+        });
+    });
 }
 
 //===== PORT =====//
