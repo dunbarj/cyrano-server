@@ -54,7 +54,7 @@ app.post('/user/create', function(request, response) {
     var username = request.body.username;
     var full_name = request.body.full_name;
     var password = encrypt(request.body.password);
-    connection.query('INSERT INTO users (username, full_name, password) VALUES (\'' + username + '\', \'' + full_name + '\', \'' + password + '\')', function (error, results, fields) {
+    connection.query('INSERT INTO users (username, full_name, password, currency) VALUES (\'' + username + '\', \'' + full_name + '\', \'' + password + '\',' + ' \'100\'')', function (error, results, fields) {
         if (error) response.send(error);
         console.log(results);
         response.send(results);
@@ -470,13 +470,46 @@ app.post('/post/:pid/follow', function(request, response) {
         checkPost (postId, function(post_check) {
             if (post_check != 0) {
                 console.log("Post " + postId + " does not exist in database!")
-                response.sendStatus(400);
+                response.sendStatus(400);/
                 return;
             }
             //Both user_id and postId exist
+            
+            //TODO should probably check if an entry exists already
+            
             var sql = "INSERT INTO user_is_following VALUES (user_id, post_id) VALUES (\'"
                 + json.user_id + "\', \'"
                 + postId + "\')";
+            connection.query(sql, function(error, result, fields) {
+                if (error) throw error;
+                response.send(result);
+            });
+        });
+    });
+});
+
+//Unfollow a post
+app.post('/post/:pid/unfollow', function(request, response) {
+    var postId = request.params.pid;
+    var json = request.body;
+    if (!postId) {
+        response.sendStatus(400);
+        return;
+    }
+    checkUser (json.user_id, function(check_result) {
+        if (check_result == 0) {
+            console.log("User does not exist in database.");
+            response.sendStatus(400);
+            return;
+        }
+        checkPost (postId, function(post_check) {
+            if (post_check != 0) {
+                console.log("Post " + postId + " does not exist in database!")
+                response.sendStatus(400);/
+                return;
+            }
+            //Both user_id and postId exist
+            var sql = "DELETE FROM user_is_following WHERE user_id = \'" + json.user_id + "\' AND post_id = \'" + postId + "\'");
             connection.query(sql, function(error, result, fields) {
                 if (error) throw error;
                 response.send(result);
@@ -870,6 +903,38 @@ app.post('/admin/reply/:rid/unhide', function(request, response) {
             connection.query(query, function(error, update_results, fields) {
                 if (error) throw error;
                 response.send(update_results);
+            });
+        });
+    });
+});
+
+//Admin mute, suspend, or ban a user (or unmute, unsuspend, or unban a user)
+app.post('/admin/user/:uid/punish', function(request, response) {
+    var userId = request.body.user_id;
+    var punishMode = request.body.punish_mode;
+    //Mode 0 == No punishment
+    //Mode 1 == Muted
+    //Mode 2 == Suspended
+    //Mode 3 == Banned
+    checkUser(userId, function (admin_results) {
+        if (admin_results != 2) {
+            response.sendStatus(400);
+            return;
+        }
+        checkUser(userId, function (user_results) {
+            if (user_results == 0) {
+                response.sendStatus(400);
+                console.log("ERROR: User to punish does not exist!");
+                return;
+            } else if (user_results == 2) {
+                response.sendStatus(400);
+                console.log("ERROR: User to punish is an admin!");
+                return;
+            }
+            var query = "UPDATE users SET punishment = \'" + punishMode + "\' WHERE user_id = \'" + userId + "\'";
+            connection.query(query, function(error, results, fields) {
+                if (error) throw error;
+                response.send(results);
             });
         });
     });
