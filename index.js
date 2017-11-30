@@ -180,7 +180,7 @@ app.post('/user/:uid/tip', function(request, response) {
             response.sendStatus(400);
             return;
         }
-        response.send(200);
+        response.sendStatus(200);
     });
 });
 
@@ -552,7 +552,7 @@ app.post('/post/:pid/follow', function(request, response) {
                     return;
                 }
                 
-                var sql = "INSERT INTO user_is_following VALUES (user_id, post_id) VALUES (\'"
+                var sql = "INSERT INTO user_is_following (user_id, post_id) VALUES (\'"
                 + json.user_id + "\', \'"
                 + postId + "\')";
                 connection.query(sql, function(error, result, fields) {
@@ -585,7 +585,7 @@ app.post('/post/:pid/unfollow', function(request, response) {
                 return;
             }
             //Both user_id and postId exist
-            var sql = "DELETE FROM user_is_following WHERE user_id = \'" + json.user_id + "\' AND post_id = \'" + postId + "\')";
+            var sql = "DELETE FROM user_is_following WHERE user_id = \'" + json.user_id + "\' AND post_id = \'" + postId + "\'";
             connection.query(sql, function(error, result, fields) {
                 if (error) throw error;
                 response.send(result);
@@ -1070,7 +1070,7 @@ function checkUserCurrency(user_id, callback) {
         var sql = "SELECT currency FROM users WHERE user_id=\'" + user_id + "\'";
         connection.query(sql, function(error, results, fields) {
             if (error) throw error;
-            callback(results[0]);
+            callback(results[0].currency);
         });
     });
 }
