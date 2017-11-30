@@ -180,7 +180,7 @@ app.post('/post/create', function(request, response) {
         category = request.body.category,
         bounty = request.body.bounty;
     var date = new Date();
-    if (image === "") {image = "nope";}
+    if (image === "") {image = "nope ";}
     if (image2 === "") {image2 = "nope";}
     if (image3 === "") {image3 = "nope";}
     var datestr = date.getUTCFullYear() + "-" + (date.getUTCMonth()+1) + "-" + date.getUTCDate() + " " +
