@@ -4,6 +4,10 @@
   "description": "Cyrano is an Android application that allows users to get feedback on possible responses to questions about their conversations.",
   "main": "index.js",
   "express-session": "1.14.2",
+  "dependencies": {
+	"express":"*",
+	"body-parser":"*"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
