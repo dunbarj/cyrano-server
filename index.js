@@ -54,9 +54,19 @@ app.post('/user/create', function(request, response) {
     var username = request.body.username;
     var full_name = request.body.full_name;
     var password = encrypt(request.body.password);
-    connection.query('INSERT INTO users (username, full_name, password, currency) VALUES (\'' + username + '\', \'' + full_name + '\', \'' + password + '\',' + ' \'100\'')', function (error, results, fields) {
+    connection.query('INSERT INTO users (username, full_name, password, currency) VALUES (\'' + username + '\', \'' + full_name + '\', \'' + password + '\',' + ' \'100\')', function (error, results, fields) {
         if (error) response.send(error);
         console.log(results);
+        response.send(results);
+    });
+});
+
+app.post('/user/fbcreate', function(request, response) {
+    var username = request.body.username;
+    var full_name = request.body.full_name;
+    var token = encrypt(request.body.token);
+    connection.query('INSERT INTO users (username, full_name, facebook_token, currency) VALUES (\'' + username + '\', \'' + full_name + '\', \'' + token + '\',' + ' \'100\')', function (error, results, fields) {
+        if (error) response.send(error);
         response.send(results);
     });
 });
@@ -100,6 +110,30 @@ app.get('/user/login', function(request, response) {
                     response.cookie('cookie', gid, { maxAge: 100000000000, httpOnly: false });
                     response.send(user);
                 } else { response.send("Username or Password Incorrect"); }
+            } else { response.send("User for username does not exist");}
+        });
+    } else { response.sendStatus(400); }
+});
+
+//User Login
+app.get('/user/fblogin', function(request, response) {
+    var json = request.query;
+    if (json.token) {
+        var token = encrypt(json.token);
+        var sql = "SELECT * FROM users WHERE facebook_token=\'" + token + "\'";
+        connection.query(sql, function (error, results, fields) {
+            if (error) throw error;
+            var user = results[0];
+            if (user !== undefined) {
+                var gid = guid();
+                user.cookie = null;
+                user.password = null;
+                connection.query("UPDATE users SET cookie =\'" + encrypt(gid) +"\' WHERE facebook_token=\'" + token + "\'", function (er, res, fi) {
+                    if (er) throw er;
+
+                });
+                response.cookie('cookie', gid, { maxAge: 100000000000, httpOnly: false });
+                response.send(user);
             } else { response.send("User for username does not exist");}
         });
     } else { response.sendStatus(400); }
@@ -151,27 +185,41 @@ app.post('/post/create', function(request, response) {
     if (image3 === "") {image3 = "nope";}
     var datestr = date.getUTCFullYear() + "-" + (date.getUTCMonth()+1) + "-" + date.getUTCDate() + " " +
     date.getUTCHours()+ ":" + date.getUTCMinutes() + ":" + date.getUTCSeconds();
-    connection.query('INSERT INTO posts (user_id, time_created, title, text_content, image, image2, image3, category, bounty) VALUES (\'' +
-    user_id + '\', TIMESTAMP(\'' + datestr + '\'), \'' + escape(title) + '\', \'' + escape(text_content) + '\', \'' + escape(image) +
-    '\', \'' + escape(image2) + '\', \'' + escape(image3) + '\', \'' + category + '\', \'' + bounty + '\')', function (error, results, fields) {
-        if (error) response.send(error);
-        var extraction_result = keyword_extractor.extract((text_content),{ language:"english", remove_digits: true,
-        return_changed_case:true, remove_duplicates: true});
-        //console.log(extraction_result);
-        if (extraction_result.length > 0) {
-            var i;
-            var sql = "INSERT INTO post_keywords (post_id, keyword) VALUES "
-            for (i = 0; i < extraction_result.length; i++) {
-                sql += "(" + results.insertId + ", \'" + escape(extraction_result[i]) + "\')";
-                if (i != extraction_result.length-1) {
-                    sql += ", ";
-                }
-            }
-            connection.query(sql, function (error1, results1, fields1) {
-                if (error1) throw error1;
-                response.send(results);
+    connection.query('SELECT currency FROM users WHERE user_id =' + user_id, function (error3, results3, fields3) {
+        if (error3) response.send(error3);
+        var curr = results3[0].currency;
+        if (curr >= bounty) {
+            var diff = curr - bounty;
+            console.log(diff);
+            var sql2 = "UPDATE users SET currency = \'" + diff + "\' WHERE user_id= " + user_id;
+            connection.query(sql2, function (error2, results2, fields2) {
+               if (error2) response.send(error2);
+               connection.query('INSERT INTO posts (user_id, time_created, title, text_content, image, image2, image3, category, bounty) VALUES (\'' +
+                   user_id + '\', TIMESTAMP(\'' + datestr + '\'), \'' + escape(title) + '\', \'' + escape(text_content) + '\', \'' + escape(image) +
+                   '\', \'' + escape(image2) + '\', \'' + escape(image3) + '\', \'' + category + '\', \'' + bounty + '\')', function (error, results, fields) {
+                       if (error) response.send(error);
+                       var extraction_result = keyword_extractor.extract((text_content),{ language:"english", remove_digits: true,
+                       return_changed_case:true, remove_duplicates: true});
+                       //console.log(extraction_result);
+                       if (extraction_result.length > 0) {
+                           var i;
+                           var sql = "INSERT INTO post_keywords (post_id, keyword) VALUES "
+                           for (i = 0; i < extraction_result.length; i++) {
+                               sql += "(" + results.insertId + ", \'" + escape(extraction_result[i]) + "\')";
+                               if (i != extraction_result.length-1) {
+                                   sql += ", ";
+                               }
+                           }
+                           connection.query(sql, function (error1, results1, fields1) {
+                               if (error1) throw error1;
+                               response.send(results);
+                           });
+                       } else { response.send(results); }
+                   });
             });
-        } else { response.send(results); }
+        } else {
+            response.send("Not Enough Currency!");
+        }
     });
 });
 
@@ -358,7 +406,12 @@ app.post('/post/:pid/close', function(request, response) {
             var sql1 = "UPDATE posts SET has_best_answer = 1 WHERE post_id=\'" + postId + "\'";
             connection.query(sql1, function (error1, results1, fields1) {
                 if (error1) throw error1;
-                response.send(results);
+                var sql2 = "UPDATE users set currency = currency + (SELECT bounty FROM posts WHERE post_id = " + postId +
+                ") WHERE user_id = (SELECT user_id FROM replies WHERE reply_id = " + json.reply_id + " )";
+                connection.query(sql2, function (error2, results2, fields2) {
+                    if (error2) throw error2;
+                    response.send(results);
+                });
             });
         });
     } else { response.sendStatus(400); }
@@ -470,7 +523,7 @@ app.post('/post/:pid/follow', function(request, response) {
         checkPost (postId, function(post_check) {
             if (post_check != 0) {
                 console.log("Post " + postId + " does not exist in database!")
-                response.sendStatus(400);/
+                response.sendStatus(400);
                 return;
             }
             //Both user_id and postId exist
@@ -505,11 +558,11 @@ app.post('/post/:pid/unfollow', function(request, response) {
         checkPost (postId, function(post_check) {
             if (post_check != 0) {
                 console.log("Post " + postId + " does not exist in database!")
-                response.sendStatus(400);/
+                response.sendStatus(400);
                 return;
             }
             //Both user_id and postId exist
-            var sql = "DELETE FROM user_is_following WHERE user_id = \'" + json.user_id + "\' AND post_id = \'" + postId + "\'");
+            var sql = "DELETE FROM user_is_following WHERE user_id = \'" + json.user_id + "\' AND post_id = \'" + postId + "\')";
             connection.query(sql, function(error, result, fields) {
                 if (error) throw error;
                 response.send(result);
