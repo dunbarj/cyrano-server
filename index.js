@@ -120,6 +120,7 @@ app.get('/user/fblogin', function(request, response) {
     var json = request.query;
     if (json.token) {
         var token = encrypt(json.token);
+        console.log("token: " + token);
         var sql = "SELECT * FROM users WHERE facebook_token=\'" + token + "\'";
         connection.query(sql, function (error, results, fields) {
             if (error) throw error;
