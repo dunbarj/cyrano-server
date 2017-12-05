@@ -774,7 +774,7 @@ app.get('/post/:pid/reply/all', function(request, response) {
                 return;
             }
             var sql = "SELECT reply_id, post_id, replies.user_id, text_content, image, image2, image3, is_best_answer, up_votes, down_votes," +
-            " username FROM replies INNER JOIN users ON replies.user_id=users.user_id WHERE CASE WHEN ((SELECT user_id FROM" +
+            " username, is_featured FROM replies INNER JOIN users ON replies.user_id=users.user_id WHERE CASE WHEN ((SELECT user_id FROM" +
             " posts WHERE post_id =" + postid + ") =" + userid + ") THEN post_id =" + postid + " AND is_hidden = 0 ELSE post_id = "+ postid +" END";
             if (top > 0) {
                 sql += " ORDER BY (replies.up_votes - replies.down_votes) DESC";
@@ -790,7 +790,7 @@ app.get('/post/:pid/reply/all', function(request, response) {
                     results[i].image2 = unescape(results[i].image2);
                     results[i].image3 = unescape(results[i].image3);
                 }
-                response.send(reportFilter(results));
+                response.send(prioritizeFeatured(reportFilter(results)));
             });
         });
     });
@@ -1009,6 +1009,31 @@ app.post('/admin/reply/:rid/feature', function(request, response) {
                 return;
             }
             var sql = "UPDATE replies SET is_featured = 1 WHERE reply_id = \'" + replyId + "\'";
+            connection.query(sql, function(error, results, field) {
+                if (error) throw error;
+                response.send(results);
+            });
+        });
+    });
+});
+
+//Admin unfeature a reply
+app.post('/admin/reply/:rid/unfeature', function(request, response) {
+    var replyId = request.params.rid;
+    var userId = request.body.user_id;
+    checkUser(userId, function(admins_results) {
+        if (admin_results != 2) {
+            console.log("ERROR: User attempting to feature a reply does not exist or is not an admin!");
+            response.sendStatus(400);
+            return;
+        }
+        checkReply(replyId, function(reply_results) {
+            if (reply_results == -1) {
+                console.log("ERROR: Admin attempting to feature a reply that does not exist!");
+                response.sendStatus(400);
+                return;
+            }
+            var sql = "UPDATE replies SET is_featured = 0 WHERE reply_id = \'" + replyId + "\'";
             connection.query(sql, function(error, results, field) {
                 if (error) throw error;
                 response.send(results);
@@ -1342,6 +1367,17 @@ function reportFilter(input) {
         return item.hide_for_reporting !== 1; 
     });
     return filtered;
+}
+
+//Helper function to prioritize featured replies to a post
+functio prioritizeFeatured(input) {
+    var featured = input.filter(function(item) {
+        return item.is_featured == 1;
+    });
+    var nonfeatured = input.filter(function(item) {
+        return item.is_featured == 0; 
+    });
+    return featured.concat(nonfeatured);
 }
 
 //Helper function to exchange "amt" currency from user 1 to user 2
