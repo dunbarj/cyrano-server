@@ -1370,7 +1370,7 @@ function reportFilter(input) {
 }
 
 //Helper function to prioritize featured replies to a post
-functio prioritizeFeatured(input) {
+function prioritizeFeatured(input) {
     var featured = input.filter(function(item) {
         return item.is_featured == 1;
     });
