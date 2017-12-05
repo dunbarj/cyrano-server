@@ -185,6 +185,16 @@ app.post('/user/:uid/tip', function(request, response) {
     });
 });
 
+//Give a user a device id for notifications
+app.post('/user/:uid/deviceId', function(request, response) {
+    var user_id = request.params.uid,
+        device_id = request.body.device_id;
+    connection.query('UPDATE users SET device_id = \'' + device_id + '\' WHERE user_id = ' + user_id, function (error, results, fields) {
+        if (error) response.send(error);
+        response.send(results);
+    });
+});
+
 //Create a post
 app.post('/post/create', function(request, response) {
     var user_id = request.body.user_id,
@@ -228,7 +238,13 @@ app.post('/post/create', function(request, response) {
                            }
                            connection.query(sql, function (error1, results1, fields1) {
                                if (error1) throw error1;
-                               response.send(results);
+                               var sql = "INSERT INTO user_is_following (user_id, post_id) VALUES (\'"
+                               + user_id + "\', \'"
+                               + results.insertId + "\')";
+                               connection.query(sql, function(error5, result5, fields5) {
+                                   if (error5) throw error5;
+                                   response.send(results);
+                               });
                            });
                        } else { response.send(results); }
                    });
@@ -457,7 +473,23 @@ app.post('/post/:pid/reply', function(request, response) {
         "\', \'" + escape(json.text_content) + "\')";
         connection.query(sql, function (error, results, fields) {
             if (error) throw error;
-            response.send(results);
+            var sql2 = "SELECT device_id, title FROM user_is_following INNER JOIN users ON user_is_following.user_id = " +
+            "users.user_id INNER JOIN posts ON posts.post_id = user_is_following.post_id WHERE user_is_following.post_id=" + postId;
+            connection.query(sql2, function (error1, results1, fields1) {
+                if (error1) throw error1;
+                var device_ids = [];
+                var title = ""
+                for (var x in results1) {
+                    if (results1[x].device_id) {
+                        device_ids.push(results1[x].device_id)
+                        title = results1[x].title;
+                    }
+                }
+                if (device_ids.length > 0) {
+                    createNotification(device_ids, title);
+                }
+                response.send(results);
+            });
         });
     });
 });
@@ -1074,6 +1106,10 @@ function checkUserCurrency(user_id, callback) {
             callback(results[0].currency);
         });
     });
+}
+
+function createNotification(device_ids, message) {
+    console.log("DeviceIDs: " + device_ids + "\nMessage: " + message);
 }
 
 //Helper function that checks if the post with the given post_id exists
