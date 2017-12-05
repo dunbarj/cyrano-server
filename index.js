@@ -120,6 +120,7 @@ app.get('/user/fblogin', function(request, response) {
     var json = request.query;
     if (json.token) {
         var token = encrypt(json.token);
+        console.log("token: " + token);
         var sql = "SELECT * FROM users WHERE facebook_token=\'" + token + "\'";
         connection.query(sql, function (error, results, fields) {
             if (error) throw error;
@@ -166,6 +167,21 @@ app.get('/user/:uid/posts', function(request, response) {
             results[i].text_content = unescape(results[i].text_content);
         }
         response.send(reportFilter(results));
+    });
+});
+
+//Tip a user, sends back status code 200 on success
+app.post('/user/:uid/tip', function(request, response) {
+    var user_from = request.body.user_id,
+        user_to = request.params.uid,
+        amount = request.body.amount;
+    exchangeCurrency(user_from, user_to, amount, function (result) {
+        if (result < 0) {
+            console.log("Currency exchange from user " + user_from + " to user " + user_to + " has failed!");
+            response.sendStatus(400);
+            return;
+        }
+        response.sendStatus(200);
     });
 });
 
@@ -384,7 +400,6 @@ app.post('/post/:pid', function(request, response) {
 
 //Delete a post
 app.delete('/post/:pid', function(request, response) {
-    //SPRINT 1 - Traver
     var postId = request.params.pid;
     if (postId) {
         var sql = "DELETE FROM posts WHERE post_id=\'" + postId + "\'";
@@ -528,14 +543,23 @@ app.post('/post/:pid/follow', function(request, response) {
             }
             //Both user_id and postId exist
             
-            //TODO should probably check if an entry exists already
-            
-            var sql = "INSERT INTO user_is_following VALUES (user_id, post_id) VALUES (\'"
+            //Check if an entry exists already
+            var query = "SELECT * FROM user_is_following WHERE user_id = \'" + json.user_id + "\' AND post_id = \'" + postId + "\'";
+            connection.query(query, function(error, exist_results, fields) {
+                if (error) throw error;
+                if (exist_results.length > 0) {
+                    console.log("User with user_id " + json.user_id + " is already following post with post_id " + postId + "!");
+                    response.sendStatus(400);
+                    return;
+                }
+                
+                var sql = "INSERT INTO user_is_following (user_id, post_id) VALUES (\'"
                 + json.user_id + "\', \'"
                 + postId + "\')";
-            connection.query(sql, function(error, result, fields) {
-                if (error) throw error;
-                response.send(result);
+                connection.query(sql, function(error, result, fields) {
+                    if (error) throw error;
+                    response.send(result);
+                }); 
             });
         });
     });
@@ -562,11 +586,28 @@ app.post('/post/:pid/unfollow', function(request, response) {
                 return;
             }
             //Both user_id and postId exist
-            var sql = "DELETE FROM user_is_following WHERE user_id = \'" + json.user_id + "\' AND post_id = \'" + postId + "\')";
+            var sql = "DELETE FROM user_is_following WHERE user_id = \'" + json.user_id + "\' AND post_id = \'" + postId + "\'";
             connection.query(sql, function(error, result, fields) {
                 if (error) throw error;
                 response.send(result);
             });
+        });
+    });
+});
+
+//Gets posts that are followed by a specific user
+app.get('/post/userfollowed/:uid', function(request, response) {
+    var user_id = request.params.uid;
+    checkUser(user_id, function(check_result) {
+        if (check_result == 0) {
+            console.log("User with user_id " + user_id + " does not exist!");
+            response.sendStatus(400);
+            return;
+        }
+        var query = "SELECT * FROM posts WHERE post_id IN (SELECT post_id FROM user_is_following WHERE user_id = \'" + user_id + "\')";
+        connection.query(query, function(error, results, fields) {
+            if (error) throw error;
+            response.send(results);
         });
     });
 });
@@ -587,6 +628,7 @@ app.post('/post/:pid/report', function(request, response) {
         }
         var check_query = "SELECT * FROM posts WHERE post_id=\'" + postId + "\'";
         connection.query(check_query, function(error, check_results, fields) {
+            if (error) throw error;
             if (check_results.length <= 0) {
                 console.log("Post does not exist in database!");
                 response.sendStatus(400);
@@ -1020,6 +1062,20 @@ function checkUser(user_id, callback) {
     });
 }
 
+//Checks if user exists and sends currency amount to callback
+function checkUserCurrency(user_id, callback) {
+    checkUser(user_id, function(check) {
+        if (check == 0) {
+            callback(-1);
+        }
+        var sql = "SELECT currency FROM users WHERE user_id=\'" + user_id + "\'";
+        connection.query(sql, function(error, results, fields) {
+            if (error) throw error;
+            callback(results[0].currency);
+        });
+    });
+}
+
 //Helper function that checks if the post with the given post_id exists
 function checkPost(post_id, callback) {
     var sql = "SELECT * FROM posts WHERE post_id=\'" + post_id + "\'";
@@ -1034,7 +1090,7 @@ function checkPost(post_id, callback) {
     });
 }
 
-//Remove reported posts from sql results
+//Helper function to remove reported posts from sql results
 function reportFilter(input) {
     var filtered = input.filter(function(item) {
         return item.hide_for_reporting !== 1; 
@@ -1042,13 +1098,17 @@ function reportFilter(input) {
     return filtered;
 }
 
-//Exchange "amt" currency from user 1 to user 2
+//Helper function to exchange "amt" currency from user 1 to user 2
 function exchangeCurrency(user1, user2, amt, callback) {
-    checkUser (user1, function(check_results) {
-        if (check_results == 0) {
+    checkUserCurrency (user1, function(check_results) {
+        if (check_results < 0) {
             console.log("User with user_id " + user1 + " does not exist!");
             return callback(-1);
+        } else if (check_results < amt) {
+            console.log("User with user_id " + user1 + " does not have enough currency for that transaction!");
+            return callback(-1);
         }
+        //User 1 exists and has enough currency for transaction
         checkUser(user2, function(check_results2) {
             if (check_results2 == 0) {
                 console.log("User with user_id " + user2 + " does not exist!");
