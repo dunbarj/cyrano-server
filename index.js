@@ -1008,6 +1008,7 @@ app.post('/admin/user/:uid/punish', function(request, response) {
     var uid = request.params.uid;
     var userId = request.body.user_id;
     var punishMode = request.body.punish_mode;
+    console.log("\nUser " + userId + " is attempting to punsish user " + uid + " to level " + punishMode + "!\n");
     //Mode 0 == No punishment
     //Mode 1 == Muted
     //Mode 2 == Suspended
