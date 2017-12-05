@@ -794,7 +794,7 @@ app.get('/post/:pid/reply/all', function(request, response) {
             });
         });
     });
-});
+});f
 
 //Get a specific reply to a post
 app.get('/post/:pid/reply/:rid', function(request, response) {
@@ -996,7 +996,7 @@ app.post('/post/:pid/reply/:rid/report', function(request, response) {
 app.post('/admin/reply/:rid/feature', function(request, response) {
     var replyId = request.params.rid;
     var userId = request.body.user_id;
-    checkUser(userId, function(admins_results) {
+    checkUser(userId, function(admin_results) {
         if (admin_results != 2) {
             console.log("ERROR: User attempting to feature a reply does not exist or is not an admin!");
             response.sendStatus(400);
@@ -1021,7 +1021,7 @@ app.post('/admin/reply/:rid/feature', function(request, response) {
 app.post('/admin/reply/:rid/unfeature', function(request, response) {
     var replyId = request.params.rid;
     var userId = request.body.user_id;
-    checkUser(userId, function(admins_results) {
+    checkUser(userId, function(admin_results) {
         if (admin_results != 2) {
             console.log("ERROR: User attempting to feature a reply does not exist or is not an admin!");
             response.sendStatus(400);
