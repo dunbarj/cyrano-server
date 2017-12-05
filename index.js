@@ -794,7 +794,7 @@ app.get('/post/:pid/reply/all', function(request, response) {
             });
         });
     });
-});f
+});
 
 //Get a specific reply to a post
 app.get('/post/:pid/reply/:rid', function(request, response) {
