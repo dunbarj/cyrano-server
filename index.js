@@ -195,47 +195,57 @@ app.post('/post/create', function(request, response) {
         image3 = request.body.image3,
         category = request.body.category,
         bounty = request.body.bounty;
-    var date = new Date();
-    if (image === "") {image = "nope ";}
-    if (image2 === "") {image2 = "nope";}
-    if (image3 === "") {image3 = "nope";}
-    var datestr = date.getUTCFullYear() + "-" + (date.getUTCMonth()+1) + "-" + date.getUTCDate() + " " +
-    date.getUTCHours()+ ":" + date.getUTCMinutes() + ":" + date.getUTCSeconds();
-    connection.query('SELECT currency FROM users WHERE user_id =' + user_id, function (error3, results3, fields3) {
-        if (error3) response.send(error3);
-        var curr = results3[0].currency;
-        if (curr >= bounty) {
-            var diff = curr - bounty;
-            console.log(diff);
-            var sql2 = "UPDATE users SET currency = \'" + diff + "\' WHERE user_id= " + user_id;
-            connection.query(sql2, function (error2, results2, fields2) {
-               if (error2) response.send(error2);
-               connection.query('INSERT INTO posts (user_id, time_created, title, text_content, image, image2, image3, category, bounty) VALUES (\'' +
-                   user_id + '\', TIMESTAMP(\'' + datestr + '\'), \'' + escape(title) + '\', \'' + escape(text_content) + '\', \'' + escape(image) +
-                   '\', \'' + escape(image2) + '\', \'' + escape(image3) + '\', \'' + category + '\', \'' + bounty + '\')', function (error, results, fields) {
-                       if (error) response.send(error);
-                       var extraction_result = keyword_extractor.extract((text_content),{ language:"english", remove_digits: true,
-                       return_changed_case:true, remove_duplicates: true});
-                       //console.log(extraction_result);
-                       if (extraction_result.length > 0) {
-                           var i;
-                           var sql = "INSERT INTO post_keywords (post_id, keyword) VALUES "
-                           for (i = 0; i < extraction_result.length; i++) {
-                               sql += "(" + results.insertId + ", \'" + escape(extraction_result[i]) + "\')";
-                               if (i != extraction_result.length-1) {
-                                   sql += ", ";
-                               }
-                           }
-                           connection.query(sql, function (error1, results1, fields1) {
-                               if (error1) throw error1;
-                               response.send(results);
-                           });
-                       } else { response.send(results); }
-                   });
-            });
-        } else {
-            response.send("Not Enough Currency!");
+    checkUser (user_id, function(check_result) {
+        if (check_result == 0) {
+            console.log("User does not exist in database.");
+            response.sendStatus(400);
+            return;
+        } else if (check_result < 0) {
+            response.send(getPunishmentName(check_result));
+            return;
         }
+        var date = new Date();
+        if (image === "") {image = "nope";}
+        if (image2 === "") {image2 = "nope";}
+        if (image3 === "") {image3 = "nope";}
+        var datestr = date.getUTCFullYear() + "-" + (date.getUTCMonth()+1) + "-" + date.getUTCDate() + " " +
+        date.getUTCHours()+ ":" + date.getUTCMinutes() + ":" + date.getUTCSeconds();
+        connection.query('SELECT currency FROM users WHERE user_id =' + user_id, function (error3, results3, fields3) {
+            if (error3) response.send(error3);
+            var curr = results3[0].currency;
+            if (curr >= bounty) {
+                var diff = curr - bounty;
+                console.log(diff);
+                var sql2 = "UPDATE users SET currency = \'" + diff + "\' WHERE user_id= " + user_id;
+                connection.query(sql2, function (error2, results2, fields2) {
+                   if (error2) response.send(error2);
+                   connection.query('INSERT INTO posts (user_id, time_created, title, text_content, image, image2, image3, category, bounty) VALUES (\'' +
+                       user_id + '\', TIMESTAMP(\'' + datestr + '\'), \'' + escape(title) + '\', \'' + escape(text_content) + '\', \'' + escape(image) +
+                       '\', \'' + escape(image2) + '\', \'' + escape(image3) + '\', \'' + category + '\', \'' + bounty + '\')', function (error, results, fields) {
+                           if (error) response.send(error);
+                           var extraction_result = keyword_extractor.extract((text_content),{ language:"english", remove_digits: true,
+                           return_changed_case:true, remove_duplicates: true});
+                           //console.log(extraction_result);
+                           if (extraction_result.length > 0) {
+                               var i;
+                               var sql = "INSERT INTO post_keywords (post_id, keyword) VALUES "
+                               for (i = 0; i < extraction_result.length; i++) {
+                                   sql += "(" + results.insertId + ", \'" + escape(extraction_result[i]) + "\')";
+                                   if (i != extraction_result.length-1) {
+                                       sql += ", ";
+                                   }
+                               }
+                               connection.query(sql, function (error1, results1, fields1) {
+                                   if (error1) throw error1;
+                                   response.send(results);
+                               });
+                           } else { response.send(results); }
+                       });
+                });
+            } else {
+                response.send("Not Enough Currency!");
+            }
+        });
     });
 });
 
@@ -451,6 +461,9 @@ app.post('/post/:pid/reply', function(request, response) {
             console.log("User with user_id " + json.user_id + " does not exist!");
             response.sendStatus(400);
             return;
+        } else if (check_result < 0) {
+            response.send(getPunishmentName(check_result));
+            return;
         }
         var sql = "INSERT INTO replies (post_id, user_id, image, image2, image3, text_content) values (\'"
         + postId + "\', \'" + json.user_id +"\', \'" + escape(image) +"\', \'" + escape(image2) +"\', \'" + escape(image3) +
@@ -474,6 +487,9 @@ app.post('/post/:pid/vote', function(request, response) {
         if (check_result == 0) {
             console.log("User with user_id " + json.user_id + " does not exist!");
             response.sendStatus(400);
+            return;
+        } else if (check_result < -1) {
+            response.send(getPunishmentName(check_result));
             return;
         }
         json.vote = (json.vote > 0 ? 1 : -1);
@@ -534,6 +550,9 @@ app.post('/post/:pid/follow', function(request, response) {
             console.log("User does not exist in database.");
             response.sendStatus(400);
             return;
+        } else if (check_result < -1) {
+            response.send(getPunishmentName(check_result));
+            return;
         }
         checkPost (postId, function(post_check) {
             if (post_check != 0) {
@@ -577,6 +596,9 @@ app.post('/post/:pid/unfollow', function(request, response) {
         if (check_result == 0) {
             console.log("User does not exist in database.");
             response.sendStatus(400);
+            return;
+        } else if (check_result < -1) {
+            response.send(getPunishmentName(check_result));
             return;
         }
         checkPost (postId, function(post_check) {
@@ -624,6 +646,9 @@ app.post('/post/:pid/report', function(request, response) {
         if (check_result == 0) {
             console.log("User with user_id " + json.user_id + " does not exist!");
             response.sendStatus(400);
+            return;
+        } else if (check_result < 0) {
+            response.send(getPunishmentName(check_result));
             return;
         }
         var check_query = "SELECT * FROM posts WHERE post_id=\'" + postId + "\'";
@@ -682,6 +707,9 @@ app.get('/post/:pid/reply/all', function(request, response) {
         if (check_result == 0) {
             console.log("User with user_id " + userid + " does not exist!");
             response.sendStatus(400);
+            return;
+        } else if (check_result < -1) {
+            response.send(getPunishmentName(check_result));
             return;
         }
         var sql = "SELECT reply_id, post_id, replies.user_id, text_content, image, image2, image3, is_best_answer, up_votes, down_votes," +
@@ -749,6 +777,9 @@ app.post('/post/:pid/reply/:rid/vote', function(request, response) {
         if (check_result == 0) {
             console.log("User with user_id " + json.user_id + " does not exist!");
             response.sendStatus(400);
+            return;
+        } else if (check_result < -1) {
+            response.send(getPunishmentName(check_result));
             return;
         }
         json.vote = (json.vote > 0 ? 1 : -1);
@@ -822,6 +853,9 @@ app.post('/post/:pid/reply/:rid/report', function(request, response) {
         if (check_result == 0) {
             console.log("User with user_id " + json.user_id + " does not exist!");
             response.sendStatus(400);
+            return;
+        } else if (check_result < 0) {
+            response.send(getPunishmentName(check_result));
             return;
         }
         var check_query = "SELECT * FROM replies WHERE reply_id=\'" + replyId + "\'";
@@ -1054,10 +1088,14 @@ function checkUser(user_id, callback) {
     connection.query(sql, function(error, results, fields) {
         if (error) throw error;
         if (results.length > 0) {
-            if (results[0]["is_admin"] == 1) {
-                callback(2);
+            if (results[0]["punishment"] != 0) {
+                callback(-results[0]["punishment"]);
             } else {
-                callback(1);
+                if (results[0]["is_admin"] == 1) {
+                    callback(2);
+                } else {
+                    callback(1);
+                }
             }
         } else {
             callback(0);
@@ -1091,6 +1129,24 @@ function checkPost(post_id, callback) {
         callback(-1);
         return;
     });
+}
+
+//Helper function to get punishment name
+function getPunishmentName(var num) {
+    switch (num) {
+        case -1:
+            return "muted";
+            break;
+        case -2:
+            return "suspended";
+            break;
+        case -3:
+            return "banned";
+            break;
+        default:
+            return "none";
+            break;
+    }
 }
 
 //Helper function to remove reported posts from sql results
