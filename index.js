@@ -901,23 +901,52 @@ app.post('/post/:pid/reply/:rid/report', function(request, response) {
     });
 });
 
+//Admin feature a reply
+app.post('/admin/reply/:rid/feature', function(request, response) {
+    var replyId = request.params.rid;
+    var userId = request.body.user_id;
+    checkUser(userId, function(admins_results) {
+        if (admin_results != 2) {
+            console.log("ERROR: User attempting to feature a reply does not exist or is not an admin!");
+            response.sendStatus(400);
+            return;
+        }
+        checkReply(replyId, function(reply_results) {
+            if (reply_results == -1) {
+                console.log("ERROR: Admin attempting to feature a reply that does not exist!");
+                response.sendStatus(400);
+                return;
+            }
+            var sql = "UPDATE replies SET is_featured = 1 WHERE reply_id = \'" + replyId + "\'";
+            connection.query(sql, function(error, results, field) {
+                if (error) throw error;
+                response.send(results);
+            });
+        });
+    });
+});
+
 //Admin delete a post
 app.delete('/admin/post/:pid', function(request, response) {
     var postId = request.params.pid;
     var userId = request.body.user_id;
-    if (!postId) {
-        response.sendStatus(400);
-        return;
-    }
     checkUser(userId, function (admin_results) {
         if (admin_results != 2) {
+            console.log("ERROR: User attempting to delete a post is not an admin!");
             response.sendStatus(400);
             return;
         }
-        var sql = "DELETE FROM posts WHERE post_id=\'" + postId + "\'";
-        connection.query(sql, function(error, results, field) {
-            if (error) throw error;
-            response.send(results);
+        checkPost(postId, function(post_results) {
+            if (post_results == -1) {
+                console.log("ERROR: Admin user attempted to delete a post that does not exist!");
+                response.sendStatus(400);
+                return;
+            }
+            var sql = "DELETE FROM posts WHERE post_id=\'" + postId + "\'";
+            connection.query(sql, function(error, results, field) {
+                if (error) throw error;
+                response.send(results);
+            });
         });
     });
 });
@@ -936,10 +965,15 @@ app.delete('/admin/post/:pid/reply/:rid', function(request, response) {
             response.sendStatus(400);
             return;
         }
-        var sql = "DELETE FROM replies WHERE post_id=\'" + postId + "\' AND reply_id=\'" + replyId + "\'";
-        connection.query(sql, function(error, results, field) {
-            if (error) throw error;
-            response.send(results);
+        checkPostAndReply(postId, replyId, function(check_results) {
+            if (check_results == -1) {
+                console.log("ERROR: Admin attempting to delete a reply that does not exist or does not match the post!");
+            }
+            var sql = "DELETE FROM replies WHERE post_id=\'" + postId + "\' AND reply_id=\'" + replyId + "\'";
+            connection.query(sql, function(error, results, field) {
+                if (error) throw error;
+                response.send(results);
+            });
         });
     });
 });
@@ -968,7 +1002,7 @@ app.get('/admin/post/:pid/reply/reported', function(request, response) {
         if (admin_result != 2) {
             response.sendStatus(400);
             return;
-        } 
+        }
         var sql = "SELECT * FROM replies WHERE post_id=\'" + postId + "\' AND hide_for_reporting=1";
         connection.query(sql, function(error, results, fields) {
             if (error) throw error;
@@ -990,18 +1024,25 @@ app.post('/admin/post/:pid/unhide', function(request, response) {
             response.sendStatus(400);
             return;
         }
-        var sql = "SELECT * FROM posts WHERE post_id=\'" + postId + "\' AND hide_for_reporting=1";
-        connection.query(sql, function(error, results, fields) {
-            if (error) throw error;
-            if (results.length == 0) {
-                console.log("Post with this post id is not hidden for reporting or does not exist!");
+        checkPost(postId, function (post_results) {
+            if (post_results == -1) {
+                console.log("ERROR: Admin attempting to unhide a post that does not exist!");
                 response.sendStatus(400);
                 return;
             }
-            var query = "UPDATE posts SET hide_for_reporting = 2 WHERE post_id=\'" + postId + "\'";
-            connection.query(query, function(error, update_results, fields) {
+            var sql = "SELECT * FROM posts WHERE post_id=\'" + postId + "\' AND hide_for_reporting=1";
+            connection.query(sql, function(error, results, fields) {
                 if (error) throw error;
-                response.send(update_results);
+                if (results.length == 0) {
+                    console.log("ERROR: Admin attempting to unhide a post that is not hidden!");
+                    response.sendStatus(400);
+                    return;
+                }
+                var query = "UPDATE posts SET hide_for_reporting = 2 WHERE post_id=\'" + postId + "\'";
+                connection.query(query, function(error, update_results, fields) {
+                    if (error) throw error;
+                    response.send(update_results);
+                });
             });
         });
     });
@@ -1020,18 +1061,25 @@ app.post('/admin/reply/:rid/unhide', function(request, response) {
             response.sendStatus(400);
             return;
         }
-        var sql = "SELECT * FROM replies WHERE reply_id=\'" + replyId + "\' AND hide_for_reporting=1";
-        connection.query(sql, function(error, results, fields) {
-            if (error) throw error;
-            if (results.length == 0) {
-                console.log("Reply with this reply id is not hidden for reporting or does not exist!");
+        checkReply(replyId, function(reply_results) {
+            if (reply_results == -1) {
+                console.log("ERROR: Admin is attempting to unhide a reply that does not exist!");
                 response.sendStatus(400);
                 return;
             }
-            var query = "UPDATE replies SET hide_for_reporting = 2 WHERE reply_id=\'" + replyId + "\'";
-            connection.query(query, function(error, update_results, fields) {
+            var sql = "SELECT * FROM replies WHERE reply_id=\'" + replyId + "\' AND hide_for_reporting=1";
+            connection.query(sql, function(error, results, fields) {
                 if (error) throw error;
-                response.send(update_results);
+                if (results.length == 0) {
+                    console.log("ERROR: Admin is attempting to unhide a reply that has not yet been hidden!");
+                    response.sendStatus(400);
+                    return;
+                }
+                var query = "UPDATE replies SET hide_for_reporting = 2 WHERE reply_id=\'" + replyId + "\'";
+                connection.query(query, function(error, update_results, fields) {
+                    if (error) throw error;
+                    response.send(update_results);
+                });
             });
         });
     });
@@ -1120,6 +1168,34 @@ function checkUserCurrency(user_id, callback) {
 //Helper function that checks if the post with the given post_id exists
 function checkPost(post_id, callback) {
     var sql = "SELECT * FROM posts WHERE post_id=\'" + post_id + "\'";
+    connection.query(sql, function(error, results, fields) {
+        if (error) throw error;
+        if (results.length > 0) {
+            callback(0);
+            return;
+        }
+        callback(-1);
+        return;
+    });
+}
+
+//Helper function that checks if the reply with the given reply_id exists
+function checkReply(reply_id, callback) {
+    var sql = "SELECT * FROM replies WHERE reply_id=\'" + reply_id + "\'";
+    connection.query(sql, function(error, results, fields) {
+        if (error) throw error;
+        if (results.length > 0) {
+            callback(0);
+            return;
+        }
+        callback(-1);
+        return;
+    });
+}
+
+//Helper function that checks that both reply and post id's exist and that they belong together
+function checkPostAndReply(post_id, reply_id, callback) {
+    var sql = "SELECT * FROM replies WHERE post_id=\'" + post_id + "\' AND reply_id=\'" + reply_id + "\'";
     connection.query(sql, function(error, results, fields) {
         if (error) throw error;
         if (results.length > 0) {
