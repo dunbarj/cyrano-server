@@ -1132,7 +1132,7 @@ function checkPost(post_id, callback) {
 }
 
 //Helper function to get punishment name
-function getPunishmentName(var num) {
+function getPunishmentName(num) {
     switch (num) {
         case -1:
             return "muted";
