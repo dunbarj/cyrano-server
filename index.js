@@ -1005,6 +1005,7 @@ app.post('/admin/reply/:rid/unhide', function(request, response) {
 
 //Admin mute, suspend, or ban a user (or unmute, unsuspend, or unban a user)
 app.post('/admin/user/:uid/punish', function(request, response) {
+    var uid = request.params.uid;
     var userId = request.body.user_id;
     var punishMode = request.body.punish_mode;
     //Mode 0 == No punishment
@@ -1013,10 +1014,11 @@ app.post('/admin/user/:uid/punish', function(request, response) {
     //Mode 3 == Banned
     checkUser(userId, function (admin_results) {
         if (admin_results != 2) {
+            console.log("ERROR: User is not an admin or does not exist!");
             response.sendStatus(400);
             return;
         }
-        checkUser(userId, function (user_results) {
+        checkUser(uid, function (user_results) {
             if (user_results == 0) {
                 response.sendStatus(400);
                 console.log("ERROR: User to punish does not exist!");
@@ -1026,7 +1028,7 @@ app.post('/admin/user/:uid/punish', function(request, response) {
                 console.log("ERROR: User to punish is an admin!");
                 return;
             }
-            var query = "UPDATE users SET punishment = \'" + punishMode + "\' WHERE user_id = \'" + userId + "\'";
+            var query = "UPDATE users SET punishment = \'" + punishMode + "\' WHERE user_id = \'" + uid + "\'";
             connection.query(query, function(error, results, fields) {
                 if (error) throw error;
                 response.send(results);
