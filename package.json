@@ -9,7 +9,8 @@
 	"body-parser":"*",
 	"request":"*",
 	"mysql":"*",
-	"keyword-extractor":"*"
+	"keyword-extractor":"*",
+	"firebase-admin":"*"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
