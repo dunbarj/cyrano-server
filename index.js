@@ -16,6 +16,15 @@ var connection = mysql.createConnection({
   database : config.database
 });
 
+var admin = require("firebase-admin");
+var serviceAccount = require("./ServiceAccount/ServiceAccountKey.json");
+
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: "https://cyrano-app.firebaseio.com"
+});
+
 var post_report_threshold = 3;
 var reply_report_threshold = 3;
 
@@ -491,15 +500,17 @@ app.post('/post/:pid/reply', function(request, response) {
             connection.query(sql2, function (error1, results1, fields1) {
                 if (error1) throw error1;
                 var device_ids = [];
-                var title = ""
+                var title = "";
+                var body = "";
                 for (var x in results1) {
                     if (results1[x].device_id) {
                         device_ids.push(results1[x].device_id)
-                        title = results1[x].title;
+                        title = "Notification on post you follow";
+                        body = "Someone posted a reply on the post \"" + unescape(results1[x].title) + "\" that you follow";
                     }
                 }
                 if (device_ids.length > 0) {
-                    createNotification(device_ids, title);
+                    createNotification(device_ids, title, body);
                 }
                 response.send(results);
             });
@@ -1197,8 +1208,31 @@ function checkUserCurrency(user_id, callback) {
     });
 }
 
-function createNotification(device_ids, message) {
-    console.log("DeviceIDs: " + device_ids + "\nMessage: " + message);
+function createNotification(device_ids, title, body) {
+    console.log("DeviceIDs: " + device_ids + "\nTitle: " + title + "\nBody: " + body);
+    // These registration tokens come from the client FCM SDKs.
+
+    // See the "Defining the message payload" section below for details
+    // on how to define a message payload.
+    var payload = {
+      notification: {
+        title: title,
+        body: body
+      }
+    };
+
+    // Send a message to the devices corresponding to the provided
+    // registration tokens.
+    admin.messaging().sendToDevice(device_ids, payload)
+      .then(function(response) {
+        // See the MessagingDevicesResponse reference documentation for
+        // the contents of response.
+        console.log("Successfully sent message:", response);
+      })
+      .catch(function(error) {
+        console.log("Error sending message:", error);
+      });
+
 }
 
 //Helper function that checks if the post with the given post_id exists
