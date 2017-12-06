@@ -1116,6 +1116,13 @@ app.get('/admin/post/reported', function(request, response) {
         var sql = "SELECT * FROM posts WHERE hide_for_reporting=1";
         connection.query(sql, function(error, results, fields) {
             if (error) throw error;
+            for (i = 0; i < results.length; i++) {
+                results[i].title = unescape(results[i].title);
+                results[i].text_content = unescape(results[i].text_content);
+                results[i].image = unescape(results[i].image);
+                results[i].image2 = unescape(results[i].image2);
+                results[i].image3 = unescape(results[i].image3);
+            }
             response.send(results);
         });
     });
@@ -1133,6 +1140,13 @@ app.get('/admin/post/:pid/reply/reported', function(request, response) {
         var sql = "SELECT * FROM replies WHERE post_id=\'" + postId + "\' AND hide_for_reporting=1";
         connection.query(sql, function(error, results, fields) {
             if (error) throw error;
+            for (i = 0; i < results.length; i++) {
+                results[i].title = unescape(results[i].title);
+                results[i].text_content = unescape(results[i].text_content);
+                results[i].image = unescape(results[i].image);
+                results[i].image2 = unescape(results[i].image2);
+                results[i].image3 = unescape(results[i].image3);
+            }
             response.send(results);
         });
     });
