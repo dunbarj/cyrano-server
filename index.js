@@ -697,6 +697,13 @@ app.get('/post/userfollowed/:uid', function(request, response) {
         var query = "SELECT * FROM posts WHERE post_id IN (SELECT post_id FROM user_is_following WHERE user_id = \'" + user_id + "\')";
         connection.query(query, function(error, results, fields) {
             if (error) throw error;
+            for (i = 0; i < results.length; i++) {
+                results[i].title = unescape(results[i].title);
+                results[i].text_content = unescape(results[i].text_content);
+                results[i].image = unescape(results[i].image);
+                results[i].image2 = unescape(results[i].image2);
+                results[i].image3 = unescape(results[i].image3);
+            }
             response.send(reportFilter(results));
         });
     });
