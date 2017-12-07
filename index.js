@@ -520,7 +520,8 @@ app.post('/post/:pid/reply', function(request, response) {
                     return;
                 }
                 var sql2 = "SELECT device_id, title FROM user_is_following INNER JOIN users ON user_is_following.user_id = " +
-                "users.user_id INNER JOIN posts ON posts.post_id = user_is_following.post_id WHERE user_is_following.post_id=" + postId;
+                "users.user_id INNER JOIN posts ON posts.post_id = user_is_following.post_id WHERE user_is_following.post_id=" + postId +
+                " AND users.user_id != " + json.user_id;
                 connection.query(sql2, function (error1, results1, fields1) {
                     if (error1) throw error1;
                     var device_ids = [];
