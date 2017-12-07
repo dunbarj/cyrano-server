@@ -31,8 +31,8 @@ var reply_report_threshold = 3;
 
 //===== Express =====//
 var app = express();
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+app.use(bodyParser.json({limit: '50mb'}));
 
 function guid() {
     function _p8(s) {
@@ -224,7 +224,7 @@ app.post('/post/create', function(request, response) {
             return;
         }
         var date = new Date();
-        if (image === "") {image = "nope ";}
+        if (image === "") {image = "nope";}
         if (image2 === "") {image2 = "nope";}
         if (image3 === "") {image3 = "nope";}
         var datestr = date.getUTCFullYear() + "-" + (date.getUTCMonth()+1) + "-" + date.getUTCDate() + " " +
