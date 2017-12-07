@@ -31,8 +31,8 @@ var reply_report_threshold = 3;
 
 //===== Express =====//
 var app = express();
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
+app.use(bodyParser.json({limit: '100mb'}));
 
 function guid() {
     function _p8(s) {
@@ -187,10 +187,10 @@ app.post('/user/:uid/tip', function(request, response) {
     exchangeCurrency(user_from, user_to, amount, function (result) {
         if (result < 0) {
             console.log("Currency exchange from user " + user_from + " to user " + user_to + " has failed!");
-            response.sendStatus(400);
+            response.send("failed");
             return;
         }
-        response.sendStatus(200);
+        response.send("success");
     });
 });
 
@@ -224,7 +224,7 @@ app.post('/post/create', function(request, response) {
             return;
         }
         var date = new Date();
-        if (image === "") {image = "nope ";}
+        if (image === "") {image = "nope";}
         if (image2 === "") {image2 = "nope";}
         if (image3 === "") {image3 = "nope";}
         var datestr = date.getUTCFullYear() + "-" + (date.getUTCMonth()+1) + "-" + date.getUTCDate() + " " +
